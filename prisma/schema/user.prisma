@@ -1,17 +1,3 @@
-
-model User{
-  id String @id @default(uuid())
-  firstName String?
-  lastName String?
-  email String @unique
-  phone  String?
-  password String
-  isActive Boolean @default(true)
-  role     SystemRole @default(STUDENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 enum SystemRole {
   SUPER_ADMIN
   ADMIN
@@ -19,4 +5,68 @@ enum SystemRole {
   ADMIN_DIRECTOR
   ACCOUNTANT
   STUDENT
+}
+
+model User {
+  id String @id @default(uuid())
+  firstName String?
+  lastName String?
+  email String @unique
+  phone  String?
+  password String
+  isDeleted Boolean @default(false)
+  role     SystemRole @default(STUDENT)
+  //Relationships
+  studentId   String?
+  student     Student?         @relation(fields: [studentId], references: [id])  
+
+  institutionId          String?
+  institution            Institution?    @relation(fields: [institutionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+} 
+
+
+model Student {
+  id                String    @id @default(uuid())
+  registrationId         String?   @unique 
+  status            StudentStatus @default(ON_HOLD)
+  // Relationships
+  institutionId          String
+  institution            Institution    @relation(fields: [institutionId], references: [id])
+  isRegistered      Boolean   @default(true) 
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  User User[]
+}
+
+
+enum StudentStatus {
+  ON_HOLD
+  ACTIVE 
+  SUSPENDED
+}
+
+
+
+model Institution {
+  id          String           @id @default(uuid())
+  name        String
+  address     String
+  isActive    Boolean          @default(false) // For Super Admin validation status
+  prefix      String
+  bankName   String
+  cardHolder  String
+  RIB_IBAN    String
+  BIC_SWIFT   String
+  KYC_documents   String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  student Student[]
+
+  User User[]
 }
