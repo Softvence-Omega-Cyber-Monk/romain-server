@@ -1,7 +1,8 @@
 import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { Role } from '@prisma/client';
+import { SystemRole } from '@prisma/client';
+
 
 @Injectable()
 export class SeederService implements OnApplicationBootstrap {
@@ -14,11 +15,11 @@ export class SeederService implements OnApplicationBootstrap {
   }
 
   private async seedAdmin() {
-    const adminEmail = process.env.ADMIN_EMAIL as string;
-    const adminPassword = process.env.ADMIN_PASSWORD as string;
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL as string;
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD as string;
 
     const supperAdmin = await this.prisma.user.findFirst({
-      where: { role: Role.ADMIN},
+      where: { role: SystemRole.SUPER_ADMIN},
     });
 
     if ( supperAdmin) {
@@ -26,16 +27,16 @@ export class SeederService implements OnApplicationBootstrap {
       return;
     }
 
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const hashedPassword = await bcrypt.hash(superAdminPassword, 10);
 
     await this.prisma.user.create({
       data: {
-        email: adminEmail,
+        email: superAdminEmail,
         password: hashedPassword,
-        role: Role.ADMIN,
+        role: SystemRole.SUPER_ADMIN,
       },
     });
 
-    this.logger.log(`Default super admin created: ${adminEmail}`);
+    this.logger.log(`Default super admin created: ${superAdminEmail}`);
   }
 }

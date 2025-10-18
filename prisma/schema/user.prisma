@@ -1,18 +1,22 @@
 
 model User{
   id String @id @default(uuid())
-  fullName String?
+  firstName String?
+  lastName String?
   email String @unique
+  phone  String?
   password String
   isActive Boolean @default(true)
-  role     Role @default(USER)
+  role     SystemRole @default(STUDENT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-enum Role {
+enum SystemRole {
+  SUPER_ADMIN
   ADMIN
-  SELLER
-  EMPLOYER
-  USER
+  GENERAL_MANAGER
+  ADMIN_DIRECTOR
+  ACCOUNTANT
+  STUDENT
 }
