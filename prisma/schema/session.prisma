@@ -1,0 +1,10 @@
+model Session {
+  id        String   @id @default(uuid())
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean
+  createdAt DateTime
+  updatedAt DateTime @updatedAt
+
+  Programme Programme[]
+}
