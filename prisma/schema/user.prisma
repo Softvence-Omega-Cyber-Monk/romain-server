@@ -7,7 +7,7 @@ enum SystemRole {
   STUDENT
 }
 
-model User{
+model User {
   id String @id @default(uuid())
   firstName String?
   lastName String?
@@ -20,8 +20,8 @@ model User{
   studentId   String?
   student     Student?         @relation(fields: [studentId], references: [id])  
 
-  institutionId          String
-  institution            Institution    @relation(fields: [institutionId], references: [id])
+  institutionId          String?
+  institution            Institution?    @relation(fields: [institutionId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -30,7 +30,7 @@ model User{
 
 model Student {
   id                String    @id @default(uuid())
-  studentId         String?   @unique 
+  registrationId         String?   @unique 
   status            StudentStatus @default(ON_HOLD)
   // Relationships
   institutionId          String
@@ -57,7 +57,7 @@ model Institution {
   name        String
   address     String
   isActive    Boolean          @default(false) // For Super Admin validation status
-
+  prefix      String
   bankName   String
   cardHolder  String
   RIB_IBAN    String

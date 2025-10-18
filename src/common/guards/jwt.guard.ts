@@ -38,9 +38,19 @@ export class JwtGuard extends AuthGuard('jwt') implements CanActivate {
       where: { id: user.id },
     });
 
-    if (!existingUser || !existingUser.isActive) {
-      throw new ForbiddenException('Your account is deactivated or not found');
+    if (!existingUser || existingUser.isDeleted) {
+      throw new ForbiddenException('Your account is not found');
     }
+    // If the user belongs to a school, ensure that school is active.
+   if (existingUser.institutionId) {
+    const institution = await this.prisma.institution.findUnique({ 
+        where: { id: existingUser.institutionId } 
+    });
+
+    if (!institution || !institution.isActive) {
+        throw new ForbiddenException('Access denied. Your institution account is pending validation or suspended.');
+    }
+}
 
     return true;
   }
