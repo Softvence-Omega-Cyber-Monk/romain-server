@@ -1,3 +1,11 @@
+enum SystemRole {
+  SUPER_ADMIN
+  ADMIN
+  GENERAL_MANAGER
+  ADMIN_DIRECTOR
+  ACCOUNTANT
+  STUDENT
+}
 
 model User{
   id String @id @default(uuid())
@@ -6,17 +14,59 @@ model User{
   email String @unique
   phone  String?
   password String
-  isActive Boolean @default(true)
+  isDeleted Boolean @default(false)
   role     SystemRole @default(STUDENT)
+  //Relationships
+  studentId   String?
+  student     Student?         @relation(fields: [studentId], references: [id])  
+
+  institutionId          String
+  institution            Institution    @relation(fields: [institutionId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+} 
+
+
+model Student {
+  id                String    @id @default(uuid())
+  studentId         String?   @unique 
+  status            StudentStatus @default(ON_HOLD)
+  // Relationships
+  institutionId          String
+  institution            Institution    @relation(fields: [institutionId], references: [id])
+  isRegistered      Boolean   @default(true) 
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  User User[]
 }
 
-enum SystemRole {
-  SUPER_ADMIN
-  ADMIN
-  GENERAL_MANAGER
-  ADMIN_DIRECTOR
-  ACCOUNTANT
-  STUDENT
+
+enum StudentStatus {
+  ON_HOLD
+  ACTIVE 
+  SUSPENDED
+}
+
+
+
+model Institution {
+  id          String           @id @default(uuid())
+  name        String
+  address     String
+  isActive    Boolean          @default(false) // For Super Admin validation status
+
+  bankName   String
+  cardHolder  String
+  RIB_IBAN    String
+  BIC_SWIFT   String
+  KYC_documents   String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  student Student[]
+
+  User User[]
 }
