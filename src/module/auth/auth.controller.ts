@@ -57,17 +57,17 @@ export class AuthController {
   }
 
   // refresh token 
-  @Public()
-  @Post('refresh-token')
-  async refreshToken(@Body('refreshToken') token: string, @Res() res: Response) {
-    const result = await this.authService.refreshTokens(token);
-    return sendResponse(res, {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Token refreshed',
-      data: result,
-    });
-  }
+  // @Public()
+  // @Post('refresh-token')
+  // async refreshToken(@Body('refreshToken') token: string, @Res() res: Response) {
+  //   const result = await this.authService.refreshTokens(token);
+  //   return sendResponse(res, {
+  //     statusCode: HttpStatus.OK,
+  //     success: true,
+  //     message: 'Token refreshed',
+  //     data: result,
+  //   });
+  // }
 
 
   

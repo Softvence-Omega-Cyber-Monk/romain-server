@@ -104,10 +104,10 @@ async getAllInstitutions(
     const approve = action === 'approve';
     const result = await this.institutionService.validateInstitution(id, approve);
     
-    const statusCode = approve ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+   
 
     return sendResponse(res, {
-      statusCode: statusCode,
+      statusCode: HttpStatus.OK ,
       success: true,
       message: result.message,
       data: result.institution || null,
