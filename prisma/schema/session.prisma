@@ -2,9 +2,14 @@ model Session {
   id        String   @id @default(uuid())
   startDate DateTime
   endDate   DateTime
-  isActive  Boolean
+  isActive  Boolean    @default(true)
+  institutionId          String
+  institution            Institution    @relation(fields: [institutionId], references: [id])
+
+
   createdAt DateTime
   updatedAt DateTime @updatedAt
 
-  Programme Programme[]
+  programme Programme[]
+  students Student[]
 }

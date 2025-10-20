@@ -1,0 +1,15 @@
+model Programme{
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime
+  updatedAt DateTime @updatedAt
+
+  sessionId   String
+  session     Session        @relation(fields: [sessionId], references: [id])  
+
+
+  level level[]
+}
+
+ 
+
