@@ -14,13 +14,14 @@ model User {
   email String @unique
   phone  String?
   password String
+  isActive  Boolean @default(false)
   isDeleted Boolean @default(false)
   role     SystemRole @default(STUDENT)
   //Relationships
   studentId   String?
   student     Student?         @relation(fields: [studentId], references: [id])  
 
-  institutionId          String?
+  institutionId          String? @unique
   institution            Institution?    @relation(fields: [institutionId], references: [id])
 
   createdAt DateTime @default(now())
@@ -54,10 +55,10 @@ enum StudentStatus {
 
 model Institution {
   id          String           @id @default(uuid())
-  name        String
+  name        String           @unique
   address     String
   isActive    Boolean          @default(false) // For Super Admin validation status
-  prefix      String
+  prefix      String           @unique
   bankName   String
   cardHolder  String
   RIB_IBAN    String

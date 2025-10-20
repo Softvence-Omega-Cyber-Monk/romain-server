@@ -93,6 +93,10 @@ export class AuthService {
       throw new ForbiddenException('Invalid credentials');
     }
 
+    if (!user.isActive) {
+      throw new ForbiddenException('Your account is not Active yet!');
+    }
+
     if(user.isDeleted){
         throw new BadRequestException('User is deleted!');
     }

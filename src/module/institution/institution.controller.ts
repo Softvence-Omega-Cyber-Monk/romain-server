@@ -16,7 +16,7 @@ import { Public } from 'src/common/decorators/public.decorators';
 import { SystemRole } from '@prisma/client';
 import sendResponse from '../utils/sendResponse'; // Assuming this utility path
 import { InstitutionService } from './institution.service';
-import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { OnboardInstitutionDto } from './dto/onboarding.dto';
 
 @ApiTags('Institution')
@@ -51,31 +51,43 @@ export class InstitutionController {
     });
   }
 
+@Get()
+@Roles(SystemRole.SUPER_ADMIN, SystemRole.ADMIN) // Restricted to Platform Admins
+@ApiOperation({ summary: 'Retrieve all institutions with pagination.' })
+@ApiQuery({
+  name: 'page',
+  required: false,
+  example: 1,
+  description: 'Page number (default: 1)',
+})
+@ApiQuery({
+  name: 'limit',
+  required: false,
+  example: 10,
+  description: 'Number of institutions per page (default: 10, max: 100)',
+})
+async getAllInstitutions(
+  @Query('page') page: string = '1',
+  @Query('limit') limit: string = '10',
+  @Res() res: Response,
+) {
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
 
-  @Get()
-  @Roles(SystemRole.SUPER_ADMIN, SystemRole.ADMIN) // Restricted to Platform Admins
-  @ApiOperation({ summary: 'Retrieve all institutions with pagination.' })
-  async getAllInstitutions(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '10',
-    @Res() res: Response,
-  ) {
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+  // Validate and use reasonable defaults
+  const validatedPage = pageNum > 0 ? pageNum : 1;
+  const validatedLimit = limitNum > 0 && limitNum <= 100 ? limitNum : 10;
 
-    // Validate and use reasonable defaults
-    const validatedPage = pageNum > 0 ? pageNum : 1;
-    const validatedLimit = (limitNum > 0 && limitNum <= 100) ? limitNum : 10;
-    
-    const data = await this.institutionService.getAllInstitutions(validatedPage, validatedLimit);
-    
-    return sendResponse(res, {
-      statusCode: HttpStatus.OK,
-      success: true,
-      message: 'Institutions retrieved successfully with pagination.',
-      data: data
-    });
-  }
+  const data = await this.institutionService.getAllInstitutions(validatedPage, validatedLimit);
+
+  return sendResponse(res, {
+    statusCode: HttpStatus.OK,
+    success: true,
+    message: 'Institutions retrieved successfully with pagination.',
+    data,
+  });
+}
+
 
   @Patch('validate/:id')
   @Roles(SystemRole.SUPER_ADMIN,SystemRole.ADMIN) // Only Super Admin can finalize validation/rejection

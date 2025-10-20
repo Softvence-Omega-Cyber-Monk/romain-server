@@ -34,6 +34,7 @@ export class SeederService implements OnApplicationBootstrap {
         email: superAdminEmail,
         password: hashedPassword,
         role: SystemRole.SUPER_ADMIN,
+        isActive:true
       },
     });
 

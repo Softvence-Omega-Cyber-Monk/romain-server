@@ -79,6 +79,6 @@ export class OnboardInstitutionDto {
     description: 'Initial password for the General Manager account (min 8 characters).',
   })
   @IsNotEmpty({ message: 'Password is required' })
-  @MinLength(8, { message: 'Password must be at least 8 characters' })
+  @MinLength(6, { message: 'Password must be at least 6 characters' })
   managerPassword: string;
 }
