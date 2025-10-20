@@ -20,6 +20,18 @@ export class InstitutionService {
    */
   async requestOnboarding(dto: OnboardInstitutionDto) {
     // 1. Check if the manager's email is already in use
+    const existingInstitution = await this.prisma.institution.findFirst({
+      where:{
+        OR:[
+           { name: dto.name },
+           {prefix:dto.prefix}
+        ],
+      },
+    });
+    if (existingInstitution) {
+      throw new BadRequestException('The Institution name or prefix is already exist!');
+    }
+
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.managerEmail },
     });
@@ -104,6 +116,11 @@ export class InstitutionService {
           where: { id },
           data: { isActive: true },
         });
+
+         await tx.user.update({
+          where: { institutionId:id ,role:SystemRole.GENERAL_MANAGER},
+          data: { isActive: true },
+        })
 
         // NOTE: Here you would typically send an email notification to the General Manager
         // telling them their account is approved and ready for login.
