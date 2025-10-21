@@ -12,7 +12,7 @@ import {
 import { Response, Request } from 'express';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { SystemRole } from '@prisma/client';
-import sendResponse from '../utils/sendResponse'; // Assuming this utility path
+import sendResponse from '../utils/sendResponse'; 
 import { SessionService } from './session.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { ApiTags, ApiOperation, ApiBody} from '@nestjs/swagger';
@@ -20,7 +20,7 @@ import { ApiTags, ApiOperation, ApiBody} from '@nestjs/swagger';
 
 @ApiTags('Academic Sessions (General Manager)')
 @Controller('session')
-@Roles(SystemRole.GENERAL_MANAGER) // All routes require General Manager role
+@Roles(SystemRole.GENERAL_MANAGER)
 export class SessionController {
   constructor(private sessionService: SessionService) {}
 
