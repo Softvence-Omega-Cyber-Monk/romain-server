@@ -18,7 +18,7 @@ model User {
   isDeleted Boolean @default(false)
   role     SystemRole @default(STUDENT)
   //Relationships
-  studentProfileId  String? 
+  studentProfileId  String? @unique
   studentProfile    Student?  @relation(fields: [studentProfileId], references: [id])
 
   institutionId          String? 
@@ -34,7 +34,7 @@ model Student {
   registrationNumber         String?   @unique 
 
   currentLevelId String?
-  currentLevel   level?  @relation(fields: [currentLevelId], references: [id])
+  currentLevel   Level?  @relation(fields: [currentLevelId], references: [id])
   
 
   currentSessionId String?
@@ -53,8 +53,12 @@ model Student {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  User User[]
-  payments Payment[] // Link to new Payment model
+  User User?
+
+
+  StudentDebt StudentDebt[]
+
+  Transaction Transaction[]
 }
 
 
@@ -85,4 +89,8 @@ model Institution {
   User User[]
 
   Session Session[]
+
+  Transaction Transaction[]
+
+  FeeType FeeType[]
 }
