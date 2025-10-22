@@ -8,7 +8,7 @@ model Programme{
   session     Session        @relation(fields: [sessionId], references: [id])  
 
 
-  levels level[]
+  levels Level[]
 }
 
  

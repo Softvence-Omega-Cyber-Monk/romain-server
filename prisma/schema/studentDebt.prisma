@@ -1,0 +1,27 @@
+// 6. StudentDebt (The Student's Debt / Invoice Line Item)
+// This model is created for each student upon enrollment for every LevelFee item. 
+// It tracks the remaining balance for a specific fee category for one student.
+model StudentDebt {
+  id              String    @id @default(uuid())
+  
+  // Who owes the money?
+  studentProfileId String   // Renamed for consistency
+  student         Student   @relation(fields: [studentProfileId], references: [id])
+  
+  // What is the debt for? (Links to the price configuration)
+  levelId         String  // These two fields form the composite key link
+  feeTypeId       String
+  levelFee        LevelFee  @relation(fields: [levelId, feeTypeId], references: [levelId, feeTypeId])
+  // FINANCIAL TRACKING
+  initialAmount   Decimal   // The original debt amount (copied from LevelFee.amount)
+  amountPaid      Decimal   @default(0) // The total amount student has paid against this debt item
+  
+  // Payments (This links one debt item to multiple payment line items)
+  transactionLineItems TransactionLineItem[] 
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Ensures a student has only one debt record for a given FeeType in a Level
+  @@unique([studentProfileId, levelId, feeTypeId])
+}
