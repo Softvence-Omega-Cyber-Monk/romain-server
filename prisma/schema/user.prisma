@@ -18,10 +18,10 @@ model User {
   isDeleted Boolean @default(false)
   role     SystemRole @default(STUDENT)
   //Relationships
-  studentId   String?
-  student     Student?         @relation(fields: [studentId], references: [id])  
+  studentProfileId  String? 
+  studentProfile    Student?  @relation(fields: [studentProfileId], references: [id])
 
-  institutionId          String? @unique
+  institutionId          String? 
   institution            Institution?    @relation(fields: [institutionId], references: [id])
 
   createdAt DateTime @default(now())
@@ -31,7 +31,19 @@ model User {
 
 model Student {
   id                String    @id @default(uuid())
-  registrationId         String?   @unique 
+  registrationNumber         String?   @unique 
+
+  currentLevelId String?
+  currentLevel   level?  @relation(fields: [currentLevelId], references: [id])
+  
+
+  currentSessionId String?
+  currentSession   Session? @relation(fields: [currentSessionId], references: [id])
+
+
+  // To track unsettled debt from previous years for registration block
+  previousBalance Decimal @default(0.00)
+
   status            StudentStatus @default(ON_HOLD)
   // Relationships
   institutionId          String
@@ -42,6 +54,7 @@ model Student {
   updatedAt         DateTime  @updatedAt
 
   User User[]
+  payments Payment[] // Link to new Payment model
 }
 
 
@@ -70,4 +83,6 @@ model Institution {
   student Student[]
 
   User User[]
+
+  Session Session[]
 }

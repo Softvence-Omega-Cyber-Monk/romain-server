@@ -105,29 +105,31 @@ export class AuthService {
     if (!isMatch) {
       throw new ForbiddenException('Invalid credentials');
     }
+    
+    const tokens = await getTokens(this.jwtService,
+      user.id, user.institutionId||'',user.email, user.role);
 
-    const tokens = await getTokens(this.jwtService,user.id, user.email, user.role);
     return { user, ...tokens };
   }
 
 
 // refresh token 
-  async refreshTokens(token: string) {
-    try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.REFRESH_TOKEN_SECRET,
-      });
+  // async refreshTokens(token: string) {
+  //   try {
+  //     const payload = await this.jwtService.verifyAsync(token, {
+  //       secret: process.env.REFRESH_TOKEN_SECRET,
+  //     });
 
-      const user = await this.prisma.user.findUnique({ where: { email: payload.email } });
-      if (!user) throw new UnauthorizedException('Invalid refresh token');
-      if(!user.isDeleted){
-       throw new BadRequestException('User is blocked!');
-      }
-      return getTokens(this.jwtService,user.id, user.email, user.role);
-    } catch {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-  }
+  //     const user = await this.prisma.user.findUnique({ where: { email: payload.email } });
+  //     if (!user) throw new UnauthorizedException('Invalid refresh token');
+  //     if(!user.isDeleted){
+  //      throw new BadRequestException('User is blocked!');
+  //     }
+  //     return getTokens(this.jwtService,user.id, user.email, user.role);
+  //   } catch {
+  //     throw new UnauthorizedException('Invalid refresh token');
+  //   }
+  // }
 
 
 // change password 

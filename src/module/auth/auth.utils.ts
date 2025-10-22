@@ -8,15 +8,17 @@ import { BadRequestException } from '@nestjs/common';
 export async function getTokens(
   jwtService: JwtService,
   userId: string,
+  institutionId:string,
   email: string,
   role: string,
+
 ) {
   const [access_token, refresh_token] = await Promise.all([
-    jwtService.signAsync({ id: userId, email, role }, {
+    jwtService.signAsync({ id: userId,institutionId, email, role }, {
       secret: process.env.ACCESS_TOKEN_SECRET,
       expiresIn: process.env.ACCESS_TOKEN_EXPIREIN,
     }),
-    jwtService.signAsync({ id: userId, email, role }, {
+    jwtService.signAsync({ id: userId,institutionId, email, role }, {
       secret: process.env.REFRESH_TOKEN_SECRET,
       expiresIn: process.env.REFRESH_TOKEN_EXPIREIN,
     }),
