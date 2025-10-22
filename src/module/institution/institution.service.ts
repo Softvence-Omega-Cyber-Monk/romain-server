@@ -116,11 +116,18 @@ export class InstitutionService {
           where: { id },
           data: { isActive: true },
         });
-
-         await tx.user.update({
-          where: { institutionId:id ,role:SystemRole.GENERAL_MANAGER},
-          data: { isActive: true },
-        })
+    
+       
+        const managerUser = await tx.user.findFirst({
+            where: { institutionId: id, role: SystemRole.GENERAL_MANAGER },
+        });
+        
+        if (managerUser) {
+           await tx.user.update({
+                       where: { id: managerUser.id },   // ✅ now it's unique
+                       data: { isActive: true },
+                                     });
+        }
 
         // NOTE: Here you would typically send an email notification to the General Manager
         // telling them their account is approved and ready for login.

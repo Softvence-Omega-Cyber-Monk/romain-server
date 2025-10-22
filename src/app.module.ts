@@ -9,6 +9,9 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { SeederService } from './seeder/seeder.service';
 // import { QuoteModule } from './module/quote/quote.module';
 import { InstitutionModule } from './module/institution/institution.module';
+import { SessionModule } from './module/session/session.module';
+import { ProgrammeModule } from './module/programme/programme.module';
+import { LevelModule } from './module/level/level.module';
 
 
 
@@ -31,6 +34,9 @@ import { InstitutionModule } from './module/institution/institution.module';
     AuthModule,
     UserModule,
     InstitutionModule,
+    SessionModule,
+    ProgrammeModule,
+    LevelModule,
     // QuoteModule,
   ],
   controllers: [AppController],

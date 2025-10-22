@@ -1,0 +1,14 @@
+
+model level{
+  id        String   @id @default(uuid())
+  name      String
+  coast  Decimal  @default(0)
+  programmeId   String
+  programme     Programme        @relation(fields: [programmeId], references: [id])  
+
+  createdAt DateTime
+  updatedAt DateTime @updatedAt
+
+  Student Student[]
+}
+
