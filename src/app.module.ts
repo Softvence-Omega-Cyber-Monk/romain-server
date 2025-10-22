@@ -12,6 +12,7 @@ import { InstitutionModule } from './module/institution/institution.module';
 import { SessionModule } from './module/session/session.module';
 import { ProgrammeModule } from './module/programme/programme.module';
 import { LevelModule } from './module/level/level.module';
+import { FeeTypeModule } from './module/fee-type/fee-type.module';
 
 
 
@@ -37,6 +38,7 @@ import { LevelModule } from './module/level/level.module';
     SessionModule,
     ProgrammeModule,
     LevelModule,
+    FeeTypeModule,
     // QuoteModule,
   ],
   controllers: [AppController],
