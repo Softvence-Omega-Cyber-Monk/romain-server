@@ -75,7 +75,7 @@ export class OnboardInstitutionDto {
   managerPhone?: string;
 
   @ApiProperty({
-    example: 'SecurePass123',
+    example: '123456',
     description: 'Initial password for the General Manager account (min 8 characters).',
   })
   @IsNotEmpty({ message: 'Password is required' })
