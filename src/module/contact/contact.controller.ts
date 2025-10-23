@@ -16,11 +16,14 @@ import { CreateContactDto } from './dto/create-contact.dto';
 import { ContactFilterDto, UpdateContactDto } from './dto/update-contact.dto';
 import { Public } from 'src/common/decorators/public.decorators';
 import { ApiTags } from '@nestjs/swagger';
+import {MailService} from '../mail/mail.service';
 
 @ApiTags('contact us')
 @Controller('contact')
 export class ContactController {
-  constructor(private readonly contactService: ContactService) {}
+  constructor(
+    private readonly contactService: ContactService,
+    private readonly MailService: MailService) {}
 
   // Public create endpoint
   @Post()
@@ -28,6 +31,10 @@ export class ContactController {
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async create(@Body() dto: CreateContactDto) {
     const created = await this.contactService.create(dto);
+    console.log("contact from --------------->",dto);
+    const email = dto.email;
+    await this.MailService.sendContactForm(dto);
+    await this.MailService.sendSubscriptionConfirmation(email);
     return {
       statusCode: HttpStatus.CREATED,
       success: true,
