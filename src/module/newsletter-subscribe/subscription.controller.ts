@@ -23,18 +23,21 @@ import { Public } from '../../common/decorators/public.decorators';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import sendResponse from '../../module/utils/sendResponse';
 import { Response } from 'express';
-
+import {MailService} from '../mail/mail.service';
 @ApiTags('Newsletter Subscription')
 @Controller('newsletter-subscribe')
 @Public()
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(private readonly subscriptionService: SubscriptionService,
+              private readonly MailService: MailService) {}
 
   @Post('/')
   @ApiOperation({ summary: 'Public endpoint for subscription to request .' })
   @ApiBody({ type: CreateSubscriptionDto })
   async create(@Body() createSubscriptionDto: CreateSubscriptionDto, @Res() res: Response) {
     const data = await this.subscriptionService.create(createSubscriptionDto);
+    const email = data.email;
+    await this.MailService.sendSubscriptionConfirmation(email);
     return sendResponse(res, {
       statusCode: HttpStatus.CREATED,
       success: true,
@@ -87,7 +90,6 @@ export class SubscriptionController {
   @Public()
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async unsubscribe(@Body() dto: UnsubscribeDto) {
-    console.log("dto------------->",dto);
     const updated = await this.subscriptionService.unsubscribe(dto.email);
     return {
       statusCode: HttpStatus.OK,
