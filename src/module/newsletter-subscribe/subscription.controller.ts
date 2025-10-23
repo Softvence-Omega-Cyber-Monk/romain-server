@@ -20,12 +20,12 @@ import {
   UpdateSubscriptionDto,
 } from './dto/create-subscription.dto';
 import { Public } from '../../common/decorators/public.decorators';
-import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import sendResponse from '../../module/utils/sendResponse';
 import { Response } from 'express';
 
-
-@Controller('subscription')
+@ApiTags('Newsletter Subscription')
+@Controller('newsletter-subscribe')
 @Public()
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
