@@ -15,6 +15,9 @@ import { ContactService } from './contact.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { ContactFilterDto, UpdateContactDto } from './dto/update-contact.dto';
 import { Public } from 'src/common/decorators/public.decorators';
+import { ApiTags } from '@nestjs/swagger';
+
+@ApiTags('contact us')
 @Controller('contact')
 export class ContactController {
   constructor(private readonly contactService: ContactService) {}
