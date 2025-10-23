@@ -14,15 +14,12 @@ import { LevelModule } from './module/level/level.module';
 import { FeeTypeModule } from './module/fee-type/fee-type.module';
 import { SubscriptionModule } from './module/newsletter-subscribe/subscription.module';
 import { ContactModule } from './module/contact/contact.module';
-<<<<<<< HEAD
 import { LevelFeeModule } from './module/level-fee/level-fee.module';
 import { StudentDebtModule } from './module/student-debt/student-debt.module';
 import { StudentModule } from './module/student/student.module';
 
 
-=======
 import { MailModule } from './module/mail/mail.module';
->>>>>>> 9c63458bfd922bfc56e4a2a01b14bc8ffaf27c38
 
 @Module({
   imports: [
@@ -69,14 +66,11 @@ import { MailModule } from './module/mail/mail.module';
     FeeTypeModule,
     SubscriptionModule,
     ContactModule,
-<<<<<<< HEAD
     LevelFeeModule,
     StudentDebtModule,
     StudentModule,
     // QuoteModule,
-=======
     MailModule,
->>>>>>> 9c63458bfd922bfc56e4a2a01b14bc8ffaf27c38
   ],
   controllers: [AppController],
   providers: [AppService, SeederService],

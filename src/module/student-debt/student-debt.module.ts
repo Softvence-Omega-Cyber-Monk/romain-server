@@ -5,5 +5,6 @@ import { StudentDebtController } from './student-debt.controller';
 @Module({
   controllers: [StudentDebtController],
   providers: [StudentDebtService],
+   exports: [StudentDebtService]  
 })
 export class StudentDebtModule {}
