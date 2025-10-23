@@ -14,6 +14,8 @@ model User {
   email String @unique
   phone  String?
   password String
+  tokenExpiry  DateTime?
+  activationToken  String?
   isActive  Boolean @default(false)
   isDeleted Boolean @default(false)
   role     SystemRole @default(STUDENT)
