@@ -1,0 +1,48 @@
+// 7. Transaction (The Payment Event)
+// This is the record of a single, successful payment event (e.g., a single bank transfer).
+model Transaction {
+  id              String    @id @default(uuid())
+  
+  // Payment Details
+  transactionRef  String?   @unique // Reference number from Mooney/Bank
+  amount          Decimal             // Total amount of the payment event
+  status          String              // PENDING, PAID, FAILED, REFUNDED
+  
+  // Who made the payment?
+  studentProfileId String   // Renamed for consistency
+  student         Student   @relation(fields: [studentProfileId], references: [id])
+  
+  // Where is the money going? (Used for reconciliation)
+  institutionId   String
+  institution     Institution @relation(fields: [institutionId], references: [id])
+
+  // Timestamps
+  paymentDate     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relationship to the items paid off
+  transactionLineItems TransactionLineItem[]
+}
+
+// 8. TransactionLineItem (The Receipt Detail / Debt Allocation)
+// This join table links one Transaction (Payment) to one or more StudentDebt items (Categories Paid).
+model TransactionLineItem {
+  id              String    @id @default(uuid())
+  
+  // Payment link
+  transactionId   String
+  transaction     Transaction @relation(fields: [transactionId], references: [id])
+  
+  // Debt link
+  studentDebtId   String
+  studentDebt     StudentDebt @relation(fields: [studentDebtId], references: [id])
+  
+  // The amount of the payment that was allocated to this specific debt item
+  amountAllocated Decimal 
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([transactionId, studentDebtId])
+}
