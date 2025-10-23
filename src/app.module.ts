@@ -14,6 +14,11 @@ import { LevelModule } from './module/level/level.module';
 import { FeeTypeModule } from './module/fee-type/fee-type.module';
 import { SubscriptionModule } from './module/newsletter-subscribe/subscription.module';
 import { ContactModule } from './module/contact/contact.module';
+import { LevelFeeModule } from './module/level-fee/level-fee.module';
+import { StudentDebtModule } from './module/student-debt/student-debt.module';
+import { StudentModule } from './module/student/student.module';
+
+
 import { MailModule } from './module/mail/mail.module';
 
 @Module({
@@ -61,6 +66,10 @@ import { MailModule } from './module/mail/mail.module';
     FeeTypeModule,
     SubscriptionModule,
     ContactModule,
+    LevelFeeModule,
+    StudentDebtModule,
+    StudentModule,
+    // QuoteModule,
     MailModule,
   ],
   controllers: [AppController],
