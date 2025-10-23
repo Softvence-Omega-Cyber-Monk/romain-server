@@ -12,11 +12,11 @@ export class StudentDebtService {
    * Automatically generates all StudentDebt records for a new student based on their LevelFee configuration.
    * This is the auto-invoicing mechanism.
    */
-  async generateInitialDebt(dto: GenerateInitialDebtDto) {
+  async generateInitialDebt(dto: GenerateInitialDebtDto,tx: Prisma.TransactionClient) {
     const { studentProfileId, levelId } = dto;
 
     // 1. Get the price list (LevelFee) for the student's Level
-    const levelFees = await this.prisma.levelFee.findMany({
+    const levelFees = await tx.levelFee.findMany({
       where: { levelId },
     });
 
@@ -37,7 +37,7 @@ export class StudentDebtService {
 
     // 3. Insert all debt records in one transaction
     try {
-      await this.prisma.studentDebt.createMany({
+      await tx.studentDebt.createMany({
         data: debtRecords,
         skipDuplicates: true, // Should not happen here, but good safeguard
       });

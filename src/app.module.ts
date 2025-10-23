@@ -3,11 +3,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './module/auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule,ConfigService } from '@nestjs/config';
 import { UserModule } from './module/user/user.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { SeederService } from './seeder/seeder.service';
-// import { QuoteModule } from './module/quote/quote.module';
 import { InstitutionModule } from './module/institution/institution.module';
 import { SessionModule } from './module/session/session.module';
 import { ProgrammeModule } from './module/programme/programme.module';
@@ -15,27 +14,51 @@ import { LevelModule } from './module/level/level.module';
 import { FeeTypeModule } from './module/fee-type/fee-type.module';
 import { SubscriptionModule } from './module/newsletter-subscribe/subscription.module';
 import { ContactModule } from './module/contact/contact.module';
+<<<<<<< HEAD
 import { LevelFeeModule } from './module/level-fee/level-fee.module';
 import { StudentDebtModule } from './module/student-debt/student-debt.module';
 import { StudentModule } from './module/student/student.module';
 
 
+=======
+import { MailModule } from './module/mail/mail.module';
+>>>>>>> 9c63458bfd922bfc56e4a2a01b14bc8ffaf27c38
 
 @Module({
   imports: [
-    MailerModule.forRoot({
-      transport: {
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
+    ConfigModule.forRoot({ isGlobal: true }), // config loader,
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get<string>('SMTP_HOST'),
+          port: Number(config.get<string>('SMTP_PORT') || 587),
+          secure: Number(config.get<string>('SMTP_PORT') || 587) === 465,
+          auth: {
+            user: config.get<string>('SMTP_USER'),
+            pass: config.get<string>('SMTP_PASS'),
+          },
         },
-      },
-      defaults: {
-        from: process.env.EMAIL_USER,
-      },
+        defaults: {
+          from: config.get<string>('SMTP_FROM') || config.get<string>('SMTP_USER'),
+        },
+      }),
     }),
-    ConfigModule.forRoot({ isGlobal: true }),
+
+    // MailerModule.forRoot({
+    //   transport: {
+    //     service: 'gmail',
+    //     auth: {
+    //       user: process.env.EMAIL_USER,
+    //       pass: process.env.EMAIL_PASS,
+    //     },
+    //   },
+    //   defaults: {
+    //     from: process.env.EMAIL_USER,
+    //   },
+    // }),
+    // ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
     UserModule,
@@ -46,10 +69,14 @@ import { StudentModule } from './module/student/student.module';
     FeeTypeModule,
     SubscriptionModule,
     ContactModule,
+<<<<<<< HEAD
     LevelFeeModule,
     StudentDebtModule,
     StudentModule,
     // QuoteModule,
+=======
+    MailModule,
+>>>>>>> 9c63458bfd922bfc56e4a2a01b14bc8ffaf27c38
   ],
   controllers: [AppController],
   providers: [AppService, SeederService],
