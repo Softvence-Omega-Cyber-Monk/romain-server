@@ -15,6 +15,7 @@ import { LevelModule } from './module/level/level.module';
 import { FeeTypeModule } from './module/fee-type/fee-type.module';
 import { SubscriptionModule } from './module/newsletter-subscribe/subscription.module';
 import { ContactModule } from './module/contact/contact.module';
+import { LevelFeeModule } from './module/level-fee/level-fee.module';
 
 
 
@@ -43,6 +44,7 @@ import { ContactModule } from './module/contact/contact.module';
     FeeTypeModule,
     SubscriptionModule,
     ContactModule,
+    LevelFeeModule,
     // QuoteModule,
   ],
   controllers: [AppController],
