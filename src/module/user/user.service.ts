@@ -1,5 +1,5 @@
 // src/user/user.service.ts
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -123,4 +123,42 @@ return newUser;
         },
     });
   }
+
+
+
+/**
+     * GM only: Manually sets the isActive status of a student account 
+     * identified by their Student ID, scoped by the institutionId.
+     */
+    async manuallySetAccountStatus(institutionId: string, studentId: string, isActive: boolean): Promise<User> {
+        
+        // 1. Find the User associated with the Student ID
+        const studentProfile = await this.prisma.student.findUnique({
+            where: { 
+                registrationNumber: studentId, 
+                institutionId: institutionId, 
+            },
+            select: { 
+                User: true 
+            }
+        });
+
+        if (!studentProfile || !studentProfile.User) {
+            throw new NotFoundException(`Student account with ID ${studentId} not found in your institution.`);
+        }
+
+        const userId = studentProfile.User.id;
+
+        // 2. Perform the update
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { 
+                isActive: isActive,
+                activationToken: isActive ? null : studentProfile.User.activationToken,
+                tokenExpiry: isActive ? null : studentProfile.User.tokenExpiry,
+            },
+        });
+    }
+
+
 }
