@@ -146,9 +146,7 @@ export class AuthService {
       throw new BadRequestException('Old password is incorrect');
     }
 
-    if (dto.newPassword !== dto.confirmPassword) {
-      throw new BadRequestException("Passwords don't match");
-    }
+
 
     const hashed = await bcrypt.hash(dto.newPassword, parseInt(process.env.SALT_ROUND!) );
     await this.prisma.user.update({

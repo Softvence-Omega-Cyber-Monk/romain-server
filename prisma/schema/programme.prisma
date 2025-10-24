@@ -1,6 +1,7 @@
 model Programme{
   id        String   @id @default(uuid())
   name      String
+  code      String?
   createdAt DateTime  @default(now())
   updatedAt DateTime @updatedAt
 
@@ -9,6 +10,8 @@ model Programme{
 
 
   levels Level[]
+
+  @@unique([code, sessionId])
 }
 
  

@@ -3,84 +3,105 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { SystemRole, User } from '@prisma/client';
+import { SystemRole, User, Prisma } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
+
 
 // Define the shape of data required to create a student user (Internal DTO)
 interface CreateStudentUserPayload {
-  email: string;
-  password: string;
-  institutionId: string;
-  studentProfileId: string;
-  role: SystemRole;
-  firstName:string;
-  lastName:string;
+ email: string;
+ password: string; // The clear-text temporary password
+ institutionId: string;
+ studentProfileId: string;
+ role: SystemRole;
+ firstName:string;
+ lastName:string;
+ studentId: string; 
+ institutionName: string;
 }
 
 // Define the shape for password/token updates (Internal)
 interface ActivationTokenResult {
-    token: string;
-    activationLink: string;
+ token: string;
+ activationLink: string;
 }
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+ constructor(
+    private prisma: PrismaService,
+    private emailService: MailService, // <-- INJECTED
+  ) {}
 
-  /**
-   * 1. Creates a new User record for a student.
-   * 2. Hashes the temporary password (as the student will set a new one).
-   * 3. Sets the account status to INACTIVE and generates an activation token.
-   * * NOTE: This method is designed to be called within the $transaction of StudentService, 
-   * so it uses the standard 'this.prisma' client, and relies on the parent service's transaction 
-   * to handle atomicity/rollback.
-   */
-  async createStudentUser(payload: CreateStudentUserPayload): Promise<User> {
-    // Check if user already exists by email (though the student ID is the primary login)
-    const existingUser = await this.prisma.user.findUnique({
-        where: { email: payload.email },
-    });
-    if (existingUser) {
-        throw new BadRequestException('A user account with this email already exists.');
-    }
+ /**
+   * 1. Creates a new User record, hashes the temp password, and generates token.
+   * 2. Sends the activation email with the temporary credentials.
+   * NOTE: The User record creation MUST use the transaction client (tx) for atomicity.
+   */
+ async createStudentUser(payload: CreateStudentUserPayload, tx: Prisma.TransactionClient): Promise<User> {
+  // Check if user already exists by email (done with main Prisma client, OK outside transaction)
+const existingUser = await this.prisma.user.findUnique({
+where: { email: payload.email },
+  });
+  if (existingUser) {
+throw new BadRequestException('A user account with this email already exists.');
+  }
 
-    // Hash the temporary password
-    const hashedPassword = await bcrypt.hash(payload.password, 10);
+  // Hash the temporary password
+ const hashedPassword = await bcrypt.hash(payload.password, 10);
+  
+  // Generate token and expiry for activation
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenExpiry = new Date();
+  tokenExpiry.setHours(tokenExpiry.getHours() + 24); // 24 hours validity
+
+    // --- 1. Create User Record (using Transaction Client: tx) ---
+  const newUser = await tx.user.create({
+  data: {
+  email: payload.email,
+    password: hashedPassword, // Store temporary hash
+    institutionId: payload.institutionId,
+    studentProfileId: payload.studentProfileId,
+    role: payload.role,
+    isActive: false, // Account starts inactive
+    activationToken: token,
+    tokenExpiry: tokenExpiry,
+    firstName:payload.firstName,
+    lastName:payload.lastName
+    },
+  });
+
+    // --- 2. Send Email (OUTSIDE TRANSACTION/COMMIT) ---
+    // Email sending should happen AFTER the DB transaction commits, but since the
+    // DB operations in this service are part of the parent StudentService transaction, 
+    // we assume the risk of the email being sent before a DB failure *or* rely on 
+    // the EmailService to be robust. For simplicity, we trigger it here:
     
-    // Generate token and expiry for activation
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenExpiry = new Date();
-    tokenExpiry.setHours(tokenExpiry.getHours() + 24); // 24 hours validity
+    const { activationLink } = this.generateActivationLink(newUser.id, token);
 
-    return this.prisma.user.create({
-        data: {
-            email: payload.email,
-            password: hashedPassword, // Store temporary hash
-            institutionId: payload.institutionId,
-            studentProfileId: payload.studentProfileId,
-            role: payload.role,
-            isActive: false, // Account starts inactive
-            activationToken: token,
-            tokenExpiry: tokenExpiry,
-            firstName:payload.firstName,
-            lastName:payload.lastName
-            // firstName and lastName should ideally be added from the Student DTO here
-        },
+    await this.emailService.sendStudentActivationEmail({
+        to: newUser.email,
+        studentId: payload.studentId,
+        tempPassword: payload.password, // The clear-text version for the student
+        activationLink: activationLink,
+        institutionName: payload.institutionName,
     });
-  }
 
-  // --- Helper for Activation Link (Used after successful account creation) ---
-  public generateActivationLink(userId: string, token: string): ActivationTokenResult {
-    const activationLink = `${process.env.CLIENT_URL}/activate?id=${userId}&token=${token}`; 
-    return { token, activationLink };
-  }
+return newUser;
+ }
+
+ // --- Helper for Activation Link (Used after successful account creation) ---
+ public generateActivationLink(userId: string, token: string): ActivationTokenResult {
+  const activationLink = `${process.env.CLIENT_URL}/activate?id=${userId}&token=${token}`; 
+ return { token, activationLink };
+ }
 
 
-  // --- Main Activation Method (Called by AuthController) ---
-// src/user/user.service.ts (Modified activateAccount)
-
-async activateAccount(userId: string, token: string, oldPassword: string, newPassword: string): Promise<User> {
+ // --- Main Activation Method (Called by AuthController) ---
+  async activateAccount(userId: string, token: string, newPassword: string): Promise<User> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
+    // ... (rest of activation logic remains unchanged) ...
+    
     // 1. Validate Token and Expiry
     if (!user || user.activationToken !== token || user.tokenExpiry! < new Date()) {
         throw new BadRequestException('Invalid or expired activation link.');
@@ -88,13 +109,7 @@ async activateAccount(userId: string, token: string, oldPassword: string, newPas
     if (user.isActive) {
         throw new BadRequestException('Account is already active.');
     }
-    
-    // 2. Validate Temporary Password (The new security hurdle)
-    const isTempPasswordValid = await bcrypt.compare(oldPassword, user.password);
-    if (!isTempPasswordValid) {
-        throw new BadRequestException('Invalid temporary password provided.');
-    }
-    
+
     // 3. Hash and store the new, permanent password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -107,7 +122,5 @@ async activateAccount(userId: string, token: string, oldPassword: string, newPas
             tokenExpiry: null,
         },
     });
-}
-
-
+  }
 }

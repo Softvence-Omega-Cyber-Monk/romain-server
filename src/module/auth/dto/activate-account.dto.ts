@@ -1,16 +1,21 @@
 // src/auth/dto/activate-account.dto.ts
-
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ActivateAccountDto {
-    @ApiProperty({ description: 'The temporary password received in the activation email.' })
+    @ApiProperty({ description: 'The UUID of the User profile to activate (from URL param or hidden field).' })
+    @IsNotEmpty()
+    @IsUUID()
+    userId: string;
+    
+    @ApiProperty({ description: 'The unique token sent to the user\'s email (from URL query).' })
     @IsNotEmpty()
     @IsString()
-    oldPassword: string; // The temporary password
+    token: string;
 
-    @ApiProperty({ description: 'The student\'s new, permanent password.' })
+    @ApiProperty({ description: 'The new permanent password the student is setting.' })
     @IsNotEmpty()
     @IsString()
-    newPassword: string; // The final password
+    @MinLength(8, { message: 'Password must be at least 8 characters long.' })
+    newPassword: string; 
 }

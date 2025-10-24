@@ -34,6 +34,12 @@ export class StudentService {
     if (level.programme.sessionId !== dto.currentSessionId) {
         throw new BadRequestException('The selected Level is not part of the specified Session.');
     }
+
+    // Fetch Institution details needed for email (Do this outside the $transaction for safety)
+    const institution = await this.prisma.institution.findUniqueOrThrow({
+    where: { id: institutionId },
+    select: { name: true } // Only fetch the name
+    });
     
     // 2. GENERATE STUDENT ID (Required for login/username)
     // This must also be outside the transaction since it relies on COUNT/SELECT
@@ -64,15 +70,17 @@ export class StudentService {
         // Assuming createStudentUser is refactored to accept a transaction client (Prisma.TransactionClient) or performs no heavy DB writes itself, we'll keep it simple here:
         const tempPassword=process.env.STUDENT_TEMP_PASS as string;
 
-        const newUserRecord = await this.userService.createStudentUser({
-            email: dto.email,
-            password:tempPassword, 
-            institutionId: institutionId,
-            studentProfileId: newStudentRecord.id,
-            role: SystemRole.STUDENT,
-            firstName:dto.firstName,
-            lastName:dto.lastName
-        });
+       const newUserRecord = await this.userService.createStudentUser({
+        email: dto.email,
+        password: tempPassword, 
+        institutionId: institutionId,
+        studentProfileId: newStudentRecord.id,
+        role: SystemRole.STUDENT,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        studentId: studentId,
+        institutionName: institution.name,
+    }, tx as Prisma.TransactionClient);
 
         // C. AUTOMATED FINANCIAL INITIALIZATION (Auto-Invoicing)
         // This debt generation logic must also use the transaction client (tx) for atomicity

@@ -11,10 +11,14 @@ import {
 } from './dto/forget-reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Request, Response } from 'express';
+import { ActivateAccountDto } from './dto/activate-account.dto';
+import { UserService } from '../user/user.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService,
+    private readonly userService: UserService,
+  ) {}
 
 // register 
 //   @Public()
@@ -122,6 +126,27 @@ export class AuthController {
   }
 
 
+
+  @Post('activate')
+    @Public() 
+    async activateAccount(@Body() dto: ActivateAccountDto, @Res() res: Response) {
+        
+        const { userId, token, newPassword } = dto;
+        const activatedUser = await this.userService.activateAccount(
+            userId, 
+            token, 
+            newPassword
+        );
+
+        return sendResponse(res, {
+            statusCode: HttpStatus.OK,
+            success: true,
+            message: 'Account successfully activated!. You can login the mobile app.',
+            data: { 
+                email: activatedUser.email
+            },
+        });
+    }
 
 
 }

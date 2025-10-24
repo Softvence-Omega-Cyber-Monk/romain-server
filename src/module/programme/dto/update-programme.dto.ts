@@ -7,4 +7,10 @@ export class UpdateProgrammeDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  
+   @ApiPropertyOptional({ example: 'CSE', description: 'code of the academic programme (CSE,EEE,ME etc).' })
+   @IsOptional()
+    @IsString()
+    code: string;
 }

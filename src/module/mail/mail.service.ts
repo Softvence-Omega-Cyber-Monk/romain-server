@@ -69,4 +69,53 @@ export class MailService {
       throw new InternalServerErrorException('Failed to process contact form submission.');
     }
   }
+
+
+
+  /**
+     * Sends the initial activation email to the newly enrolled student.
+     * Contains the Student ID, Temporary Password, and Activation Link.
+     */
+  async sendStudentActivationEmail(payload: StudentActivationPayload): Promise<void> {
+        const { to, studentId, tempPassword, activationLink, institutionName } = payload;
+        
+        const mailOptions = {
+            from: `"Student Enrollment: ${institutionName}" <${process.env.SMTP_USER}>`, 
+            to: to,
+            subject: `✅ ${institutionName}: Account Enrolment and Activation Required`, 
+            html: `
+                <h1>Welcome to ${institutionName}!</h1> 
+                <p>Your account has been successfully created by the General Manager. Please complete your registration immediately by activating your account.</p>
+                
+                <hr style="border: 1px solid #ccc;">
+
+                <h2>Your Credentials:</h2>
+                <p><strong>Institution:</strong> <code>${institutionName}</code></p>
+                <p><strong>Student ID:</strong> <code>${studentId}</code></p>
+                <p><strong>Temporary Password:</strong> <code>${tempPassword}</code></p>
+                
+                <hr style="border: 1px solid #ccc;">
+
+                <h3>Action Required: Account Activation</h3>
+                <p>Click the link below to activate your account and set your permanent password. This link is valid for **24 hours**.</p>
+                <a href="${activationLink}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #007bff; text-decoration: none; border-radius: 5px;">
+                    Activate My Account
+                </a>
+                
+                <p style="margin-top: 20px; font-size: 0.9em; color: #555;">
+                    <strong>Note:</strong> If the link expires, please contact the institution authority to manually activate your account. You will then be able to log in with your Student ID and the Temporary Password provided above.
+                </p>
+            `,
+        };
+
+        try {
+            await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Nodemailer Error: Failed to send student activation email:', error);
+            throw new InternalServerErrorException('Enrollment failed: Could not send activation email.');
+        }
+    }
 }
+
+
+
