@@ -7,6 +7,11 @@ export class CreateProgrammeDto {
   @IsNotEmpty()
   @IsString()
   name: string;
+
+  @ApiProperty({ example: 'CSE', description: 'code of the academic programme (CSE,EEE,ME etc).' })
+  @IsNotEmpty()
+  @IsString()
+  code: string;
   
   // This is the crucial foreign key that links the Programme to the active academic year.
   @ApiProperty({ description: 'UUID of the academic Session (created in Step 1) this programme belongs to.' })

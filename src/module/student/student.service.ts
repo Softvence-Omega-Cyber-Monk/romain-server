@@ -34,6 +34,12 @@ export class StudentService {
     if (level.programme.sessionId !== dto.currentSessionId) {
         throw new BadRequestException('The selected Level is not part of the specified Session.');
     }
+
+    // Fetch Institution details needed for email (Do this outside the $transaction for safety)
+    const institution = await this.prisma.institution.findUniqueOrThrow({
+    where: { id: institutionId },
+    select: { name: true } // Only fetch the name
+    });
     
     // 2. GENERATE STUDENT ID (Required for login/username)
     // This must also be outside the transaction since it relies on COUNT/SELECT
@@ -64,15 +70,17 @@ export class StudentService {
         // Assuming createStudentUser is refactored to accept a transaction client (Prisma.TransactionClient) or performs no heavy DB writes itself, we'll keep it simple here:
         const tempPassword=process.env.STUDENT_TEMP_PASS as string;
 
-        const newUserRecord = await this.userService.createStudentUser({
-            email: dto.email,
-            password:tempPassword, 
-            institutionId: institutionId,
-            studentProfileId: newStudentRecord.id,
-            role: SystemRole.STUDENT,
-            firstName:dto.firstName,
-            lastName:dto.lastName
-        });
+       const newUserRecord = await this.userService.createStudentUser({
+        email: dto.email,
+        password: tempPassword, 
+        institutionId: institutionId,
+        studentProfileId: newStudentRecord.id,
+        role: SystemRole.STUDENT,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        studentId: studentId,
+        institutionName: institution.name,
+    }, tx as Prisma.TransactionClient);
 
         // C. AUTOMATED FINANCIAL INITIALIZATION (Auto-Invoicing)
         // This debt generation logic must also use the transaction client (tx) for atomicity
@@ -95,6 +103,60 @@ export class StudentService {
         studentId: studentId 
     };
   }
+
+async findMyProfile(userId: string) {
+    // 1. Find the User first, ensuring they exist and fetching the linked studentProfileId
+    const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { 
+            studentProfileId: true, 
+            email: true, 
+            firstName: true, 
+            lastName: true, 
+            phone: true,
+            profileImage:true
+        } 
+    });
+
+    if (!user || !user.studentProfileId) {
+        throw new NotFoundException('Student profile not found for the logged-in user.');
+    }
+
+    // 2. Use the fetched studentProfileId to retrieve the detailed Student record
+    const studentProfile = await this.prisma.student.findUnique({
+        where: { id: user.studentProfileId }, // 💡 CORRECTED LOOKUP
+        select: {
+            id: true,
+            registrationNumber: true,
+            status: true,
+            previousBalance: true,
+            
+            // Academic Context
+            currentLevel: { select: { name: true } },
+            currentSession: { select: { name: true, startDate: true, endDate: true } },
+            
+            // Institution Details
+            institution: { select: { name: true } },
+        },
+    });
+
+    if (!studentProfile) {
+        // Highly unlikely, but a safety check if the foreign key points to a deleted student.
+        throw new NotFoundException('Student record linkage is broken.');
+    }
+
+    // 3. Combine and return the data (User details + Student Profile details)
+    return { 
+        ...studentProfile, 
+        user: { 
+            email: user.email, 
+            firstName: user.firstName, 
+            lastName: user.lastName, 
+            phoneNumber: user.phone,
+            profileImage:user.profileImage
+        } 
+    };
+  }
 
   // ... other methods ...
 }

@@ -30,11 +30,27 @@ export class ProgrammeService {
         throw new BadRequestException(`A Programme named "${dto.name}" already exists for this session.`);
     }
 
+    // 3. 🚨 NEW VALIDATION: Check for duplicate CODE within the same session
+    if (dto.code) {
+        const existingProgrammeByCode = await this.prisma.programme.findFirst({
+            where: { 
+                // Case-insensitive check is often better for codes
+                code: dto.code, 
+                sessionId: dto.sessionId 
+            }
+        });
+        
+        if (existingProgrammeByCode) {
+            throw new BadRequestException(`A Programme with code "${dto.code}" already exists for this session.`);
+        }
+    }
+
     // 3. Create the Programme
     return this.prisma.programme.create({
       data: {
         name: dto.name,
         sessionId: dto.sessionId,
+        code:dto.code
       },
     });
   }
@@ -79,10 +95,23 @@ throw new BadRequestException(`A Programme named "${dto.name}" already exists in
 }
 }
 
+if (dto.code) {
+        const existingProgrammeByCode = await this.prisma.programme.findFirst({
+            where: { 
+                code: dto.code, 
+                sessionId: programme.sessionId,
+                NOT: { id: programmeId }, 
+            },
+        });
+        if (existingProgrammeByCode) {
+            throw new BadRequestException(`A Programme with code "${dto.code}" already exists in this session.`);
+        }
+    }
+
  // 2. Perform the update
 return this.prisma.programme.update({
  where: { id: programmeId },
- data: { name: dto.name },
+ data: { name: dto.name,code:dto.code },
 });
 }
 
