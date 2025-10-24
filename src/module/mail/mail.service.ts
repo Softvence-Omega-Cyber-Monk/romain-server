@@ -115,6 +115,48 @@ export class MailService {
             throw new InternalServerErrorException('Enrollment failed: Could not send activation email.');
         }
     }
+
+
+
+/**
+   * Sends an email to the General Manager confirming Institution approval and account activation.
+   */
+  async sendGMApprovalEmail(to: string, institutionName: string, gmName: string): Promise<void> {
+        const mailOptions = {
+            from: `"Ochora -System Administration" <${process.env.SMTP_USER}>`, 
+            to: to,
+            subject: `🎉 Account Activated: ${institutionName} is Live!`, 
+            html: `
+                <h1>Congratulations, ${gmName}!</h1> 
+                <p>We are pleased to inform you that your request for **${institutionName}** has been reviewed and **approved** by the Super Administrator.</p>
+                
+                <hr style="border: 1px solid #ccc;">
+
+                <h2>Your Account is Now Active!</h2>
+                <p>Your General Manager account for **${institutionName}** has been activated. You can now log in to the system using your registered email address:</p>
+                
+                <p style="font-size: 1.1em;"><strong>Email:</strong> <code>${to}</code></p>
+                
+                <a href="${process.env.CLIENT_URL}/login" style="display: inline-block; padding: 10px 20px; color: white; background-color: #28a745; text-decoration: none; border-radius: 5px; margin-top: 15px;">
+                    Go to Login Page
+                </a>
+                
+                <p style="margin-top: 20px; font-size: 0.9em; color: #555;">
+                    *Please use the password you set during the initial sign-up process.*
+                </p>
+            `,
+        };
+
+        try {
+            await this.transporter.sendMail(mailOptions);
+        } catch (error) {
+            console.error('Nodemailer Error: Failed to send GM approval email:', error);
+            // NOTE: We don't throw an error here to prevent blocking the successful database transaction.
+        }
+    }
+
+
+
 }
 
 

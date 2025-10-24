@@ -1,9 +1,9 @@
 // src/user/user.service.ts
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { SystemRole, User, Prisma } from '@prisma/client';
+import { SystemRole, User, Prisma, StudentStatus } from '@prisma/client';
 import { MailService } from '../mail/mail.service';
 
 
@@ -30,7 +30,7 @@ interface ActivationTokenResult {
 export class UserService {
  constructor(
     private prisma: PrismaService,
-    private emailService: MailService, // <-- INJECTED
+    private emailService: MailService,
   ) {}
 
  /**
@@ -96,35 +96,66 @@ return newUser;
  return { token, activationLink };
  }
 
+async activateAccount(userId: string, token: string, newPassword: string) {
 
- // --- Main Activation Method (Called by AuthController) ---
-  async activateAccount(userId: string, token: string, newPassword: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    // ... (rest of activation logic remains unchanged) ...
-    
-    // 1. Validate Token and Expiry
-    if (!user || user.activationToken !== token || user.tokenExpiry! < new Date()) {
-        throw new BadRequestException('Invalid or expired activation link.');
+    // 1. Find User by ID and Token (and include the necessary Student link)
+    const user = await this.prisma.user.findUnique({
+        where: { 
+            id: userId, 
+            activationToken: token, // Validate token match
+        },
+        select: {
+            id: true,
+            studentProfileId: true, // Needed to update the Student record
+            isActive: true,
+            tokenExpiry: true,
+            role: true,
+        }
+    });
+
+    // 2. Validation
+    if (!user) {
+        throw new BadRequestException('Invalid activation link or User ID.');
+    }
+    if (user.tokenExpiry! < new Date()) {
+        // Since we checked the token in the query, this handles expiry separately
+        throw new BadRequestException('Activation link has expired.'); 
     }
-    if (user.isActive) {
-        throw new BadRequestException('Account is already active.');
+    if (user.isActive) {
+        throw new BadRequestException('Account is already active.');
+    }
+    if (user.role !== SystemRole.STUDENT || !user.studentProfileId) {
+        throw new InternalServerErrorException('Account type mismatch or profile link missing.');
     }
 
-    // 3. Hash and store the new, permanent password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // 3. Hash the new, permanent password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    return this.prisma.user.update({
-        where: { id: userId },
-        data: {
-            password: hashedPassword, // Store the permanent hash
-            isActive: true,
-            activationToken: null,
-            tokenExpiry: null,
-        },
-    });
-  }
+    // 4. Perform Transactional Update (User and Student)
+    const [updatedUser, updatedStudent] = await this.prisma.$transaction([
+        // A. Update the User record: Set password, set isActive=true, clear tokens
+        this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                password: hashedPassword,
+                isActive: true, // Login access is granted
+                activationToken: null,
+                tokenExpiry: null,
+            },
+        }),
 
+        // B. Update the Student record: Change status from ON_HOLD to ACTIVE
+        this.prisma.student.update({
+            where: { id: user.studentProfileId }, // Look up by the ID linked to the User
+            data: {
+                status: StudentStatus.ACTIVE, // Academic/Enrollment status is confirmed
+            },
+        }),
+    ]);
 
+    // Return the newly activated user and the student's registration number
+    return { updatedUser, registrationNumber: updatedStudent.registrationNumber };
+}
 
 /**
      * GM only: Manually sets the isActive status of a student account 

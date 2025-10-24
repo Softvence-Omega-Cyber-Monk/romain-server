@@ -67,7 +67,7 @@ export class StudentController {
             success: true,
             message: 'Account successfully activated!. You can login the mobile app now.',
             data: { 
-                email: activatedUser.email
+                email: activatedUser
             },
         });
     }
