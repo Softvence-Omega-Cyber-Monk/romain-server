@@ -22,7 +22,7 @@ export class OnboardInstitutionDto {
   @IsString()
   address: string;
 
-  @ApiProperty({ example: 'UNI-25', description: 'Prefix used for generating student registration numbers (e.g., UNIV-25-CS-0042).' })
+  @ApiProperty({ example: 'MIST', description: 'Prefix used for generating student registration numbers (e.g., UNIV-25-CS-0042).' })
   @IsNotEmpty()
   @IsString()
   prefix: string;

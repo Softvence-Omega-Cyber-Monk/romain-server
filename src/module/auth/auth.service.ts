@@ -18,6 +18,8 @@ import {
 } from './dto/forget-reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { generateOtpCode, getTokens, hashOtpCode, verifyOtp } from './auth.utils';
+import { StudentLoginDto } from './dto/student-login.dto';
+import { SystemRole } from '@prisma/client';
 
 
 @Injectable()
@@ -93,6 +95,10 @@ export class AuthService {
       throw new ForbiddenException('Invalid credentials');
     }
 
+    if (user.role == SystemRole.STUDENT) {
+      throw new ForbiddenException('Invalid login method for your account type.');
+    }
+
     if (!user.isActive) {
       throw new ForbiddenException('Your account is not Active yet!');
     }
@@ -112,6 +118,58 @@ export class AuthService {
     return { user, ...tokens };
   }
 
+
+  async studentLogin(dto: StudentLoginDto) {
+        
+        const studentProfile = await this.prisma.student.findUnique({
+            where: { registrationNumber: dto.studentId },
+            include: { User: true }
+        });
+
+        if (!studentProfile || !studentProfile.User) {
+            throw new ForbiddenException('Invalid credentials (Student ID not found)');
+        }
+
+        const user = studentProfile.User;
+
+        if (user.role !== SystemRole.STUDENT) {
+             throw new ForbiddenException('Invalid login method for your account type.');
+        }
+
+        if (!user.password) {
+
+            throw new ForbiddenException('Invalid credentials (No password set)');
+        }
+        
+
+        if (!user.isActive) {
+            throw new ForbiddenException('Your account is not Active yet! Please complete activation.');
+        }
+
+        if (user.isDeleted) {
+            throw new BadRequestException('User account is deleted!');
+        }
+
+
+        const isMatch = await bcrypt.compare(dto.password, user.password);
+        if (!isMatch) {
+            throw new ForbiddenException('Invalid credentials');
+        }
+        
+
+        const tokens = await getTokens(
+            this.jwtService,
+            user.id, 
+            user.institutionId || '', 
+            user.email, 
+            user.role
+        );
+
+
+        const { password, ...userWithoutPassword } = user;
+        
+        return { user: userWithoutPassword, ...tokens };
+    }
 
 // refresh token 
   // async refreshTokens(token: string) {
@@ -138,17 +196,15 @@ export class AuthService {
     if (!user || !user.password) {
       throw new NotFoundException('User not found');
     }
-  if(!user.isDeleted){
-      throw new BadRequestException('User is blocked!');
+  if(user.isDeleted){
+      throw new BadRequestException('The account is deleted!');
   }
     const isMatch = await bcrypt.compare(dto.oldPassword, user.password);
     if (!isMatch) {
       throw new BadRequestException('Old password is incorrect');
     }
 
-    if (dto.newPassword !== dto.confirmPassword) {
-      throw new BadRequestException("Passwords don't match");
-    }
+
 
     const hashed = await bcrypt.hash(dto.newPassword, parseInt(process.env.SALT_ROUND!) );
     await this.prisma.user.update({
@@ -164,8 +220,8 @@ export class AuthService {
   async requestResetCode(dto: RequestResetCodeDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user) throw new NotFoundException('User not found');
-     if(!user.isDeleted){
-      throw new BadRequestException('User is blocked!');
+     if(user.isDeleted){
+      throw new BadRequestException('The account is deleted!');
     }
 
 

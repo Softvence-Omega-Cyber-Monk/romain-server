@@ -13,6 +13,7 @@ model User {
   lastName String?
   email String @unique
   phone  String?
+  profileImage  String?
   password String
   tokenExpiry  DateTime?
   activationToken  String?
@@ -75,6 +76,7 @@ enum StudentStatus {
 model Institution {
   id          String           @id @default(uuid())
   name        String           @unique
+  bannerImage  String?
   address     String
   isActive    Boolean          @default(false) // For Super Admin validation status
   prefix      String           @unique

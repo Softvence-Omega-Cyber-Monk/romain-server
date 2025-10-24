@@ -7,12 +7,15 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { SystemRole } from '@prisma/client';
 import { OnboardInstitutionDto } from './dto/onboarding.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class InstitutionService {
   private readonly saltRounds = 10; // Define salt rounds for bcrypt
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,
+       private mailService: MailService
+  ) {}
 
   /**
    * Handles the public request to onboard a new institution.
@@ -95,64 +98,141 @@ export class InstitutionService {
   /**
    * Super Admin action to approve or reject a school's onboarding request.
    */
-  async validateInstitution(id: string, approve: boolean) {
-    const institution = await this.prisma.institution.findUnique({
-      where: { id },
-    });
+  // async validateInstitution(id: string, approve: boolean) {
+  //   const institution = await this.prisma.institution.findUnique({
+  //     where: { id },
+  //   });
 
-    if (!institution) {
-      throw new NotFoundException(`Institution with ID ${id} not found.`);
-    }
+  //   if (!institution) {
+  //     throw new NotFoundException(`Institution with ID ${id} not found.`);
+  //   }
 
-    if (institution.isActive && approve) {
-      throw new BadRequestException('Institution is already active.');
-    }
+  //   if (institution.isActive && approve) {
+  //     throw new BadRequestException('Institution is already active.');
+  //   }
     
-    // Use a transaction to handle both approval/rejection and potential user update
-    return this.prisma.$transaction(async (tx) => {
-      if (approve) {
-        // Approval: Set isActive to true
-        const updatedInstitution = await tx.institution.update({
-          where: { id },
-          data: { isActive: true },
-        });
+  //   // Use a transaction to handle both approval/rejection and potential user update
+  //   return this.prisma.$transaction(async (tx) => {
+  //     if (approve) {
+  //       // Approval: Set isActive to true
+  //       const updatedInstitution = await tx.institution.update({
+  //         where: { id },
+  //         data: { isActive: true },
+  //       });
     
        
-        const managerUser = await tx.user.findFirst({
-            where: { institutionId: id, role: SystemRole.GENERAL_MANAGER },
-        });
+  //       const managerUser = await tx.user.findFirst({
+  //           where: { institutionId: id, role: SystemRole.GENERAL_MANAGER },
+  //       });
         
-        if (managerUser) {
-           await tx.user.update({
-                       where: { id: managerUser.id },   // ✅ now it's unique
-                       data: { isActive: true },
-                                     });
-        }
+  //       if (managerUser) {
+  //          await tx.user.update({
+  //                      where: { id: managerUser.id },   // ✅ now it's unique
+  //                      data: { isActive: true },
+  //                                    });
+  //       }
 
-        // NOTE: Here you would typically send an email notification to the General Manager
-        // telling them their account is approved and ready for login.
+  //       // NOTE: Here you would typically send an email notification to the General Manager
+  //       // telling them their account is approved and ready for login.
         
-        return { message: 'Institution approved and activated successfully.', institution: updatedInstitution };
-      } else {
-        // Rejection: Delete the Institution and the associated General Manager user.
-        // Prisma will handle dependent relationships if configured (e.g., Cascade Delete)
+  //       return { message: 'Institution approved and activated successfully.', institution: updatedInstitution };
+  //     } else {
+  //       // Rejection: Delete the Institution and the associated General Manager user.
+  //       // Prisma will handle dependent relationships if configured (e.g., Cascade Delete)
 
-        // 1. Find the associated General Manager user
-        const managerUser = await tx.user.findFirst({
-            where: { institutionId: id, role: SystemRole.GENERAL_MANAGER },
-        });
+  //       // 1. Find the associated General Manager user
+  //       const managerUser = await tx.user.findFirst({
+  //           where: { institutionId: id, role: SystemRole.GENERAL_MANAGER },
+  //       });
         
-        if (managerUser) {
-            await tx.user.delete({ where: { id: managerUser.id } });
-        }
+  //       if (managerUser) {
+  //           await tx.user.delete({ where: { id: managerUser.id } });
+  //       }
         
-        // 2. Delete the institution
-        await tx.institution.delete({ where: { id } });
+  //       // 2. Delete the institution
+  //       await tx.institution.delete({ where: { id } });
 
-        return { message: 'Institution and associated user rejected and deleted successfully.' };
-      }
-    });
-  }
+  //       return { message: 'Institution and associated user rejected and deleted successfully.' };
+  //     }
+  //   });
+  // }
+
+  async validateInstitution(id: string, approve: boolean) {
+    const institution = await this.prisma.institution.findUnique({
+      where: { id },
+    });
+
+    if (!institution) {
+      throw new NotFoundException(`Institution with ID ${id} not found.`);
+    }
+
+    if (institution.isActive && approve) {
+      throw new BadRequestException('Institution is already active.');
+    }
+    
+    // Use a transaction to handle both approval/rejection and potential user update
+    const result = await this.prisma.$transaction(async (tx) => {
+      if (approve) {
+        // Approval: Set isActive to true
+        const updatedInstitution = await tx.institution.update({
+          where: { id },
+          data: { isActive: true },
+        });
+    
+        // 1. Find the General Manager user
+        const managerUser = await tx.user.findFirst({
+            where: { institutionId: id, role: SystemRole.GENERAL_MANAGER },
+            select: { id: true, email: true, firstName: true, lastName: true }, // Select necessary fields
+        });
+        
+        if (managerUser) {
+            // 2. Activate the GM's account
+            await tx.user.update({
+                where: { id: managerUser.id },
+                data: { isActive: true },
+            });
+
+            // Return necessary data for the email notification *outside* the transaction
+            const gmName = managerUser.firstName || managerUser.email;
+
+            return { 
+                message: 'Institution approved and activated successfully.', 
+                institution: updatedInstitution,
+                managerEmail: managerUser.email,
+                managerName: gmName,
+            };
+        }
+
+        return { message: 'Institution approved, but no GM user was found/activated.', institution: updatedInstitution };
+
+      } else {
+        // Rejection: Delete logic (remains unchanged)
+        const managerUser = await tx.user.findFirst({
+            where: { institutionId: id, role: SystemRole.GENERAL_MANAGER },
+        });
+        
+        if (managerUser) {
+            await tx.user.delete({ where: { id: managerUser.id } });
+        }
+        
+        await tx.institution.delete({ where: { id } });
+
+        return { message: 'Institution and associated user rejected and deleted successfully.' };
+      }
+    });
+
+    // 3. Send Email Notification (Post-Transaction)
+    if (approve && result.managerEmail) {
+        // Use the injected mailService
+        await this.mailService.sendGMApprovalEmail(
+            result.managerEmail, 
+            result.institution.name, 
+            result.managerName
+        );
+    }
+
+    return result; // Return the final result object
+  }
 
   async getAllInstitutions(page: number, limit: number) {
     // 1. Calculate skip value for pagination

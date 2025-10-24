@@ -1,6 +1,5 @@
 import { Body, Controller, HttpStatus, Patch, Post, Req, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-// import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import sendResponse from '../utils/sendResponse';
 import { Public } from 'src/common/decorators/public.decorators';
@@ -11,10 +10,15 @@ import {
 } from './dto/forget-reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Request, Response } from 'express';
+import { UserService } from '../user/user.service';
+import { ApiBody, ApiOperation } from '@nestjs/swagger';
+import { StudentLoginDto } from './dto/student-login.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService,
+    private readonly userService: UserService,
+  ) {}
 
 // register 
 //   @Public()
@@ -55,6 +59,22 @@ export class AuthController {
       data: result,
     });
   }
+
+  @Public()
+    @Post('student/login') // Dedicated endpoint for student login
+    @ApiOperation({ summary: 'Public: Log in a Student using their Student ID and password.' })
+    @ApiBody({ type: StudentLoginDto })
+    async studentLogin(@Body() dto: StudentLoginDto, @Res() res: Response) {
+        
+        const result = await this.authService.studentLogin(dto);
+
+        return sendResponse(res, {
+            statusCode: HttpStatus.OK,
+            success: true,
+            message: `Login successful.`,
+            data: result,
+        });
+    }
 
   // refresh token 
   // @Public()
@@ -109,6 +129,8 @@ export class AuthController {
     });
   }
 
+
+
   @Public()
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto, @Res() res: Response) {
@@ -120,7 +142,6 @@ export class AuthController {
       data: result,
     });
   }
-
 
 
 
