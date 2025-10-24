@@ -113,7 +113,8 @@ async findMyProfile(userId: string) {
             email: true, 
             firstName: true, 
             lastName: true, 
-            phone: true, // Use 'phone' as per your User model
+            phone: true,
+            profileImage:true
         } 
     });
 
@@ -151,7 +152,8 @@ async findMyProfile(userId: string) {
             email: user.email, 
             firstName: user.firstName, 
             lastName: user.lastName, 
-            phoneNumber: user.phone 
+            phoneNumber: user.phone,
+            profileImage:user.profileImage
         } 
     };
   }
