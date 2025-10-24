@@ -104,5 +104,57 @@ export class StudentService {
     };
   }
 
+async findMyProfile(userId: string) {
+    // 1. Find the User first, ensuring they exist and fetching the linked studentProfileId
+    const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { 
+            studentProfileId: true, 
+            email: true, 
+            firstName: true, 
+            lastName: true, 
+            phone: true, // Use 'phone' as per your User model
+        } 
+    });
+
+    if (!user || !user.studentProfileId) {
+        throw new NotFoundException('Student profile not found for the logged-in user.');
+    }
+
+    // 2. Use the fetched studentProfileId to retrieve the detailed Student record
+    const studentProfile = await this.prisma.student.findUnique({
+        where: { id: user.studentProfileId }, // 💡 CORRECTED LOOKUP
+        select: {
+            id: true,
+            registrationNumber: true,
+            status: true,
+            previousBalance: true,
+            
+            // Academic Context
+            currentLevel: { select: { name: true } },
+            currentSession: { select: { name: true, startDate: true, endDate: true } },
+            
+            // Institution Details
+            institution: { select: { name: true } },
+        },
+    });
+
+    if (!studentProfile) {
+        // Highly unlikely, but a safety check if the foreign key points to a deleted student.
+        throw new NotFoundException('Student record linkage is broken.');
+    }
+
+    // 3. Combine and return the data (User details + Student Profile details)
+    return { 
+        ...studentProfile, 
+        user: { 
+            email: user.email, 
+            firstName: user.firstName, 
+            lastName: user.lastName, 
+            phoneNumber: user.phone 
+        } 
+    };
+  }
+
   // ... other methods ...
 }

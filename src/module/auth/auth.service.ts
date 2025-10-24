@@ -196,8 +196,8 @@ export class AuthService {
     if (!user || !user.password) {
       throw new NotFoundException('User not found');
     }
-  if(!user.isDeleted){
-      throw new BadRequestException('User is blocked!');
+  if(user.isDeleted){
+      throw new BadRequestException('The account is deleted!');
   }
     const isMatch = await bcrypt.compare(dto.oldPassword, user.password);
     if (!isMatch) {
@@ -220,8 +220,8 @@ export class AuthService {
   async requestResetCode(dto: RequestResetCodeDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user) throw new NotFoundException('User not found');
-     if(!user.isDeleted){
-      throw new BadRequestException('User is blocked!');
+     if(user.isDeleted){
+      throw new BadRequestException('The account is deleted!');
     }
 
 

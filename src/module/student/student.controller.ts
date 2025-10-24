@@ -1,13 +1,13 @@
 // src/student/student.controller.ts
 
-import { Controller, Post, Body, Req,  Res, HttpStatus, Patch, Param } from '@nestjs/common';
+import { Controller, Post, Body, Req,  Res, HttpStatus, Patch, Param, Get } from '@nestjs/common';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto'; 
 import { SystemRole } from '@prisma/client';
 import { Request, Response } from 'express';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import sendResponse from '../utils/sendResponse';
-import { ApiTags, ApiOperation, ApiBody, ApiParam } from '@nestjs/swagger'; // <-- NEW IMPORTS
+import { ApiTags, ApiOperation, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger'; // <-- NEW IMPORTS
 import { Public } from 'src/common/decorators/public.decorators';
 import { ActivateAccountDto } from '../auth/dto/activate-account.dto';
 import { UserService } from '../user/user.service';
@@ -73,6 +73,26 @@ export class StudentController {
     }
 
 
+  
+  @Get('profile')
+  @Roles(SystemRole.STUDENT) // Only students can access their own profile
+  @ApiOperation({ summary: 'Student: Retrieve the logged-in student\'s full academic and personal profile.' })
+  @ApiResponse({ status: 200, description: 'Student profile retrieved successfully.' })
+  async findMyProfile(@Req() req: Request, @Res() res: Response) {
+      // The user object is attached to the request by the AuthGuard/JWT Strategy
+      const userId = req.user!.id; 
+
+      const profile = await this.studentService.findMyProfile(userId);
+
+      return sendResponse(res, {
+          statusCode: HttpStatus.OK,
+          success: true,
+          message: 'Student profile retrieved successfully.',
+          data: profile,
+      });
+  }
+
+
     @Patch('status/manual/:studentId')
     @Roles(SystemRole.GENERAL_MANAGER) // Only GMs can use this
     @ApiOperation({ 
@@ -106,4 +126,8 @@ export class StudentController {
             data: { userId: updatedUser.id, email: updatedUser.email, isActive: updatedUser.isActive },
         });
     }
+
+
+
+
 }
