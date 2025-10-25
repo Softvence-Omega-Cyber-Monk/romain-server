@@ -20,9 +20,12 @@ import { StudentModule } from './module/student/student.module';
 
 
 import { MailModule } from './module/mail/mail.module';
-
+import { ScheduleModule } from '@nestjs/schedule';
+import { NewsletterAutomationModule } from './module/newsletter-automation/newsletter-automation.module';
+import {NewsletterAutomationService} from './module/newsletter-automation/newsletter-automation.service'
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }), // config loader,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
@@ -71,8 +74,9 @@ import { MailModule } from './module/mail/mail.module';
     StudentModule,
     // QuoteModule,
     MailModule,
+    NewsletterAutomationModule,
   ],
   controllers: [AppController],
-  providers: [AppService, SeederService],
+  providers: [AppService, SeederService,NewsletterAutomationService],
 })
 export class AppModule {}

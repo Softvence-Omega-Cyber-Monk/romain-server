@@ -16,6 +16,11 @@ export class MailService {
         user: process.env.SMTP_USER,//'tareqsoftvence@gmail.com',
         pass: process.env.SMTP_PASS,
       },
+      pool: true,
+      maxConnections: 5,   // tune as needed
+      maxMessages: 1000,   // optional timeouts
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
     });
   }
 
@@ -46,7 +51,7 @@ export class MailService {
 
     const mailOptions = {
       from: '"Website Contact Form" <noreply@Newsletters-Subscribe.com>',
-      to: `tareqsoftvence@gmail.com`, // Send the email TO owner ADMIN
+      to: process.env.SMTP_USER, // Send the email TO owner ADMIN
       subject: `[Contact Form] ${subject}`,
       html: `
         <h1>New Contact Form Submission</h1>
@@ -78,11 +83,11 @@ export class MailService {
      */
   async sendStudentActivationEmail(payload: StudentActivationPayload): Promise<void> {
         const { to, studentId, tempPassword, activationLink, institutionName } = payload;
-        
+       
         const mailOptions = {
-            from: `"Student Enrollment: ${institutionName}" <${process.env.SMTP_USER}>`, 
+            from: `"Student Enrollment: ${institutionName}" <${process.env.SMTP_USER}>`,
             to: to,
-            subject: `✅ ${institutionName}: Account Enrolment and Activation Required`, 
+            subject: `✅ ${institutionName}: Account Enrolment and Activation Required`,
             html: `
                 <h1>Welcome to ${institutionName}!</h1> 
                 <p>Your account has been successfully created by the General Manager. Please complete your registration immediately by activating your account.</p>
@@ -123,9 +128,9 @@ export class MailService {
    */
   async sendGMApprovalEmail(to: string, institutionName: string, gmName: string): Promise<void> {
         const mailOptions = {
-            from: `"Ochora -System Administration" <${process.env.SMTP_USER}>`, 
+            from: `"Ochora -System Administration" <${process.env.SMTP_USER}>`,
             to: to,
-            subject: `🎉 Account Activated: ${institutionName} is Live!`, 
+            subject: `🎉 Account Activated: ${institutionName} is Live!`,
             html: `
                 <h1>Congratulations, ${gmName}!</h1> 
                 <p>We are pleased to inform you that your request for **${institutionName}** has been reviewed and **approved** by the Super Administrator.</p>
@@ -155,7 +160,17 @@ export class MailService {
         }
     }
 
-
+  async sendMail(options: { to: string; subject: string; html: string; from?: string }) {
+    const mailOptions = {
+      from: options.from || process.env.MAIL_FROM,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    };
+    await this.transporter.sendMail(mailOptions);
+    //this.logger.debug(`Sent to ${options.to} messageId=${info.messageId}`);
+    //return info;
+  }
 
 }
 
