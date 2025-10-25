@@ -133,8 +133,10 @@ async findMyProfile(userId: string) {
             previousBalance: true,
             
             // Academic Context
-            currentLevel: { select: { programme:true } },
-            currentSession: { select: { name: true, startDate: true, endDate: true } },
+            currentLevel: {
+             
+               select: {  name:true, programme:true } },
+            currentSession: { select: { name: true, startDate:true,endDate: true } },
             
             // Institution Details
             institution: { select: { name: true } },
