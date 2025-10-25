@@ -18,10 +18,4 @@ export class ChangePasswordDto {
   @MinLength(6, { message: 'New password must be at least 6 characters long.' })
   newPassword: string;
 
-  @ApiProperty({
-    example: 'newSecurePass456',
-    description: 'Repeat the new password to confirm',
-  })
-  @IsString({ message: 'Confirm password must be a string.' })
-  confirmPassword: string;
 }

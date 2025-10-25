@@ -1,63 +1,39 @@
-// import {
-//   Body,
-//   Controller,
-//   Get,
-//   HttpStatus,
-//   Param,
-//   Patch,
-//   Post,
-//   Req,
-//   Res,
-// } from '@nestjs/common';
-// import { UserService } from './user.service';
-// import sendResponse from '../utils/sendResponse';
-// import { Request, Response } from 'express';
-// import { Roles } from 'src/common/decorators/roles.decorator';
-// import { Role } from '@prisma/client';
-// import { CreateAdminDto } from './dto/create-admin.dto';
-// import { UpdateUserDto } from './dto/update-user.dto';
+// src/user/user.controller.ts
 
-// @Controller('user')
-// export class UserController {
-//   constructor(private userService: UserService) {}
+import { Controller, Param, Patch, Req, Res, HttpStatus, Body } from '@nestjs/common';
+import { UserService } from './user.service';
+import { SystemRole } from '@prisma/client';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Request } from 'express';
+import sendResponse from '../utils/sendResponse';
 
-//   // @Post('admin/create')
-//   // @Roles(Role.SUPER_ADMIN)
-//   // async createAdmin(@Body() dto: CreateAdminDto, @Res() res: Response) {
-//   //   const data = await this.userService.createAdmin(dto);
-//   //   return sendResponse(res, {
-//   //     statusCode: HttpStatus.CREATED,
-//   //     success: true,
-//   //     message: 'Admin created successfully',
-//   //     data,
-//   //   });
-//   // }
 
-//   @Get()
-//   @Roles(Role.ADMIN)
-//   async getAllUser(@Res() res: Response) {
-//     const data = await this.userService.getAllUser();
-//     return sendResponse(res, {
-//       statusCode: HttpStatus.OK,
-//       success: true,
-//       message: 'Retrive all users successfully',
-//       data,
-//     });
-//   }
+// Assuming DTOs for password changes exist:
+// import { ChangePasswordDto } from './dto/change-password.dto'; 
 
-//    @Roles(Role.ADMIN)
-//   @Patch('block/:id')
-//   async updateUserBlockStatus(
-//     @Param('id') id: string,
-//     @Body() dto: UpdateUserDto,
-//     @Res() res: Response
-//   ) {
-//     const data = await this.userService.updateUserBlockStatus(id, dto.isBlocked);
-//     return sendResponse(res, {
-//       statusCode: HttpStatus.OK,
-//       success: true,
-//       message: 'Update user status successfully',
-//       data,
-//     });
-//   }
-// }
+@Controller('user')
+export class UserController {
+    constructor(private readonly userService: UserService) {}
+
+    // --- A. STAFF FALLBACK: Manual Activation ---
+    // @Patch('activate/manual/:studentId')
+    // @Roles(SystemRole.GENERAL_MANAGER) // Only staff can use this
+    // async manualActivate(
+    //     @Param('studentId') studentId: string,
+    //     @Req() req:Request,
+    //     @Res() res: Response,
+    // ) {
+    //     // Use institutionId for scoped access control
+    //     const institutionId = req.user!.institutionId;
+        
+    //     const data = await this.userService.manuallyActivateAccount(institutionId, studentId);
+
+    //     return sendResponse(res, {
+    //         statusCode: HttpStatus.OK,
+    //         success: true,
+    //         message: `Account for ${studentId} manually activated. Student can now log in with the temporary password.`,
+    //         data: { userId: data.id, email: data.email },
+    //     });
+    // }
+   
+}
