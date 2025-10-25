@@ -20,6 +20,7 @@ import { StudentModule } from './module/student/student.module';
 
 
 import { MailModule } from './module/mail/mail.module';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
   imports: [
@@ -41,6 +42,18 @@ import { MailModule } from './module/mail/mail.module';
           from: config.get<string>('SMTP_FROM') || config.get<string>('SMTP_USER'),
         },
       }),
+    }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        redis: {
+          // 💡 CRITICAL: Uses the REDIS_HOST=redis defined in .env
+          host: configService.get<string>('REDIS_HOST'), 
+          port: configService.get<number>('REDIS_PORT'),
+          password: configService.get<string>('REDIS_PASSWORD') || undefined,
+        },
+      }),
+      inject: [ConfigService],
     }),
 
     // MailerModule.forRoot({

@@ -15,6 +15,6 @@ import { MailModule } from '../mail/mail.module';
     MailModule
   ],
   controllers: [StudentController],
-  providers: [StudentService,StudentIdService,UserService],
+  providers: [StudentService,StudentIdService],
 })
 export class StudentModule {}

@@ -1,0 +1,81 @@
+# docker-compose.yml
+
+# Best practice: The 'version' tag is now obsolete and removed.
+
+services:
+  # 1. PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: romain_db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      # CRITICAL: These must match your .env file values
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis Cache and Queue Service (for Bull)
+  redis:
+    image: redis:7.2-alpine
+    container_name: romain_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    # Use your REDIS_PASSWORD from the .env for secure connections and healthcheck
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} 
+    healthcheck:
+      # Check with password (-a ${REDIS_PASSWORD}) for security
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. NestJS Application Service (for running server and commands)
+  app:
+    container_name: romain
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app # Mount the project code for live updates/commands
+      - /app/node_modules # Necessary to prevent host node_modules from overwriting container's
+    ports:
+      - "5000:5000"
+    environment:
+      # Environment variables are passed from the host's .env file
+      - NODE_ENV=development
+      # CRITICAL: These must use the service names defined above
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      
+      # Include other variables needed by your app for full functionality
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      # ... (Add any other secrets, Stripe keys, etc., here) ...
+
+    depends_on:
+      db:
+        condition: service_healthy # Wait for DB to be fully ready
+      redis:
+        condition: service_healthy # Wait for Redis to be fully ready
+    # Start your NestJS app when the container is run with 'docker compose up'
+    command: npm run dev 
+
+# 💡 CRITICAL FIX: Defines the named volumes used by the services
+volumes:
+  redis_data:
+  pg_data:

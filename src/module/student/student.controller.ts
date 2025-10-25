@@ -1,20 +1,19 @@
-// src/student/student.controller.ts
-
-import { Controller, Post, Body, Req,  Res, HttpStatus, Patch, Param, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, Req,  Res, HttpStatus, Patch, Param, Get, Query, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto'; 
 import { SystemRole } from '@prisma/client';
 import { Request, Response } from 'express';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import sendResponse from '../utils/sendResponse';
-import { ApiTags, ApiOperation, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger'; // <-- NEW IMPORTS
+import { ApiTags, ApiOperation, ApiBody, ApiParam, ApiResponse, ApiConsumes } from '@nestjs/swagger'; // <-- NEW IMPORTS
 import { Public } from 'src/common/decorators/public.decorators';
 import { ActivateAccountDto } from '../auth/dto/activate-account.dto';
 import { UserService } from '../user/user.service';
 import { ManualStatusUpdateDto } from './dto/student-status-update.dto';
 import { GetStudentsDto } from './dto/get-students.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
-@ApiTags('Student Enrollment (General Manager)') // <-- API TAG
+@ApiTags('Student Enrollment (General Manager)')
 @Controller('student')
 export class StudentController {
     constructor(
@@ -23,7 +22,7 @@ export class StudentController {
     ) {}
 
     @Post('enroll')
-    @Roles(SystemRole.GENERAL_MANAGER) // Only GMs can enroll new students
+    @Roles(SystemRole.GENERAL_MANAGER) 
     @ApiOperation({ summary: 'GM: Enroll a single new student, creating their profile, user account, and sending the activation email.' })
     @ApiBody({ type: CreateStudentDto }) 
     async enrollStudent(
@@ -34,7 +33,7 @@ export class StudentController {
         const institutionId = req.user!.institutionId; 
         
         // Transactional enrollment: Student, User, and Debt records are created.
-        const result = await this.studentService.enrollStudent(institutionId, dto);
+        const result = await this.studentService.enrollSingleStudent(institutionId, dto);
 
        
         return sendResponse(res, {
@@ -47,8 +46,6 @@ export class StudentController {
             },
         });
     }
-
-
 
 
     @Post('activate')
@@ -152,6 +149,49 @@ export class StudentController {
     }
 
 
+
+    @Post('enroll/bulk')
+    @Roles(SystemRole.GENERAL_MANAGER)
+    @UseInterceptors(FileInterceptor('file')) // Key: 'file' is the field name in the form data
+    @ApiOperation({ summary: 'GM: Bulk enroll students via CSV file upload with asynchronous email queuing.' })
+    @ApiConsumes('multipart/form-data') // Required for file upload in Swagger
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                file: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'CSV file containing student data (firstName, lastName, email, currentLevelId, currentSessionId)',
+                },
+            },
+        },
+    })
+    async bulkEnrollStudents(
+        @UploadedFile() file: Express.Multer.File, // The uploaded file buffer
+        @Req() req: Request,
+        @Res() res: Response,
+    ) {
+        if (!file || file.mimetype !== 'text/csv') {
+            throw new BadRequestException('Please upload a valid CSV file.');
+        }
+
+        const institutionId = req.user!.institutionId;
+
+        // The service handles the parsing, transaction, and email queuing
+        const result = await this.studentService.bulkEnrollStudents(institutionId, file.buffer);
+
+        const message = result.successfulEnrollments === result.totalRecords
+            ? `Successfully enrolled ${result.successfulEnrollments} students. Activation emails are being sent.`
+            : `Bulk enrollment completed with ${result.successfulEnrollments} successful records and ${result.failedEnrollments} failures.`;
+
+        return sendResponse(res, {
+            statusCode: HttpStatus.OK,
+            success: true,
+            message: message,
+            data: result, // Returns the full summary (success count, failures array)
+        });
+    }
 
 
 }

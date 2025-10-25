@@ -77,15 +77,15 @@ throw new BadRequestException('A user account with this email already exists.');
     // we assume the risk of the email being sent before a DB failure *or* rely on 
     // the EmailService to be robust. For simplicity, we trigger it here:
     
-    const { activationLink } = this.generateActivationLink(newUser.id, token);
+    // const { activationLink } = this.generateActivationLink(newUser.id, token);
 
-    await this.emailService.sendStudentActivationEmail({
-        to: newUser.email,
-        studentId: payload.studentId,
-        tempPassword: payload.password, // The clear-text version for the student
-        activationLink: activationLink,
-        institutionName: payload.institutionName,
-    });
+    // await this.emailService.sendStudentActivationEmail({
+    //     to: newUser.email,
+    //     studentId: payload.studentId,
+    //     tempPassword: payload.password, // The clear-text version for the student
+    //     activationLink: activationLink,
+    //     institutionName: payload.institutionName,
+    // });
 
 return newUser;
  }

@@ -65,6 +65,22 @@ model Student {
 }
 
 
+// schema.prisma
+
+model StudentSequence {
+  // Use a composite ID for Institution and Session to uniquely identify the counter
+  institutionId   String
+  sessionId       String
+  
+  // The crucial field: this will store the NEXT student ID sequence number
+  // Start this at 1 for the first student.
+  currentSequence Int @default(1) 
+
+  @@id([institutionId, sessionId])
+  @@map("student_sequences")
+}
+
+
 enum StudentStatus {
   ON_HOLD
   ACTIVE 

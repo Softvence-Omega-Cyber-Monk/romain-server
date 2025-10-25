@@ -1,82 +1,91 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { CreateContactDto } from '../contact/dto/create-contact.dto';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
+export interface StudentActivationPayload {
+    to: string;
+    studentId: string;
+    tempPassword: string;
+    activationLink: string;
+    institutionName: string;
+}
 
 @Injectable()
 export class MailService {
-  private transporter: nodemailer.Transporter;
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,//'smtp.ethereal.email',
-      port: Number(process.env.SMTP_PORT),
-      secure: false, // Use TLS
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER,//'tareqsoftvence@gmail.com',
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
+  private transporter: nodemailer.Transporter;
+  constructor(
+    @InjectQueue('email') private emailQueue: Queue,
+  ) {
+    // FIX 1: When using 'service: gmail', you should NOT manually specify host, port, and secure: false, 
+    // as this creates a configuration conflict. Nodemailer handles GMail's secure SMTP (port 465, secure: true) automatically.
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail', // Relying solely on the GMail service settings
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS, // IMPORTANT: Must be a GMail App Password
+      },
+    });
+  }
 
 
-  async sendSubscriptionConfirmation(email: string,): Promise<void> {
-    const mailOptions = {
-      from: '"SoftVence Newsletter" <noreply@softcover.com>',
-      to: email,
-      subject: '👋 Thanks for Subscribing!',
-      html: `
-        <h1>Welcome!</h1>
-        <p>You have successfully subscribed to our newsletter with the email: <b>${email}</b>.</p>
-        <p>Stay tuned for our updates!</p>
-      `,
-    };
-    try {
+  async sendSubscriptionConfirmation(email: string,): Promise<void> {
+    const mailOptions = {
+      from: '"SoftVence Newsletter" <noreply@softcover.com>',
+      to: email,
+      subject: '👋 Thanks for Subscribing!',
+      html: `
+        <h1>Welcome!</h1>
+        <p>You have successfully subscribed to our newsletter with the email: <b>${email}</b>.</p>
+        <p>Stay tuned for our updates!</p>
+      `,
+    };
+    try {
+        await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error('Nodemailer Error:', error);
+      throw new InternalServerErrorException('Failed to send confirmation email.');
+    }
+  }
+  //  NEW METHOD FOR CONTACT FORM
+  async sendContactForm(contactData: CreateContactDto): Promise<void> {
+    const { name,email, subject, message } = contactData;
 
-        await this.transporter.sendMail(mailOptions);
+    const mailOptions = {
+      from: '"Website Contact Form" <noreply@Newsletters-Subscribe.com>',
+      to: `tareqsoftvence@gmail.com`, // Send the email TO owner ADMIN
+      subject: `[Contact Form] ${subject}`,
+      html: `
+        <h1>New Contact Form Submission</h1>
+        <p>You have received a new message from your website contact form.</p>
+        <hr>
+        <p><strong>Sender Name:</strong> ${name}</p>
+        <p><strong>Sender Email:</strong> ${email}</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <hr>
+        <h3>Message:</h3>
+        <p style="white-space: pre-wrap; border: 1px solid #ccc; padding: 15px;">${message}</p>
+      `,
+    };
 
-    } catch (error) {
-      console.error('Nodemailer Error:', error);
-      throw new InternalServerErrorException('Failed to send confirmation email.');
-    }
-  }
-  //  NEW METHOD FOR CONTACT FORM
-  async sendContactForm(contactData: CreateContactDto): Promise<void> {
-    const { name,email, subject, message } = contactData;
-
-    const mailOptions = {
-      from: '"Website Contact Form" <noreply@Newsletters-Subscribe.com>',
-      to: `tareqsoftvence@gmail.com`, // Send the email TO owner ADMIN
-      subject: `[Contact Form] ${subject}`,
-      html: `
-        <h1>New Contact Form Submission</h1>
-        <p>You have received a new message from your website contact form.</p>
-        <hr>
-        <p><strong>Sender Name:</strong> ${name}</p>
-        <p><strong>Sender Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
-        <hr>
-        <h3>Message:</h3>
-        <p style="white-space: pre-wrap; border: 1px solid #ccc; padding: 15px;">${message}</p>
-      `,
-    };
-
-    try {
-      await this.transporter.sendMail(mailOptions);
-      console.log(`Contact email sent from ${email} to tareqsoftvence@gmail.com`);
-    } catch (error) {
-      console.error('Nodemailer Error:', error);
-      throw new InternalServerErrorException('Failed to process contact form submission.');
-    }
-  }
+    try {
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Contact email sent from ${email} to tareqsoftvence@gmail.com`);
+    } catch (error) {
+      console.error('Nodemailer Error:', error);
+      throw new InternalServerErrorException('Failed to process contact form submission.');
+    }
+  }
 
 
 
-  /**
-     * Sends the initial activation email to the newly enrolled student.
-     * Contains the Student ID, Temporary Password, and Activation Link.
-     */
-  async sendStudentActivationEmail(payload: StudentActivationPayload): Promise<void> {
+  // ----------------------------------------------------------------------------------
+// CORE SENDER: The actual logic that runs in a Bull worker (processor)
+// ----------------------------------------------------------------------------------
+  // NOTE: Renaming this to be private/protected would be ideal, as it should ONLY 
+  // be called by the MailProcessor for reliability and retries.
+  async sendStudentActivationEmail(payload: StudentActivationPayload): Promise<void> {
         const { to, studentId, tempPassword, activationLink, institutionName } = payload;
         
         const mailOptions = {
@@ -112,9 +121,39 @@ export class MailService {
             await this.transporter.sendMail(mailOptions);
         } catch (error) {
             console.error('Nodemailer Error: Failed to send student activation email:', error);
-            throw new InternalServerErrorException('Enrollment failed: Could not send activation email.');
+            // FIX 2: Re-throw the error so the calling service (Bull Processor or API handler) knows the send failed.
+            // This allows the Bull worker to trigger a retry (attempts: 3) for bulk jobs.
+            // If called synchronously, this will fail the API call, which is better than silent failure.
+            throw new InternalServerErrorException('Failed to send student activation email.');
         }
     }
+
+
+  // ----------------------------------------------------------------------------------
+// ASYNC QUEUING: Used by bulk process, must be used by single process too!
+// ----------------------------------------------------------------------------------
+  async queueStudentActivationEmail(payload: StudentActivationPayload): Promise<void> {
+    // Add the job to the queue. No await needed here, this is fast.
+    // Set a delay or rate limit options if necessary.
+    await this.emailQueue.add('student-activation', payload, {
+        attempts: 3, // Retry failed sends 3 times
+    });
+  }
+
+
+
+  // ----------------------------------------------------------------------------------
+// SYNCHRONOUS SENDER: For single enrollment (as requested)
+// ----------------------------------------------------------------------------------
+  /**
+   * Immediately sends the student activation email without using the queue.
+   * This is used for synchronous operations like single enrollment where direct feedback is sometimes preferred.
+   */
+  async sendStudentActivationEmailSynchronous(payload: StudentActivationPayload): Promise<void> {
+        await this.sendStudentActivationEmail(payload);
+    }
+
+
 
 
 
@@ -154,10 +193,4 @@ export class MailService {
             // NOTE: We don't throw an error here to prevent blocking the successful database transaction.
         }
     }
-
-
-
 }
-
-
-
