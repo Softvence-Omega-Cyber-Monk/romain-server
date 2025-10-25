@@ -1,6 +1,6 @@
 // src/student/student.controller.ts
 
-import { Controller, Post, Body, Req,  Res, HttpStatus, Patch, Param, Get } from '@nestjs/common';
+import { Controller, Post, Body, Req,  Res, HttpStatus, Patch, Param, Get, Query } from '@nestjs/common';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto'; 
 import { SystemRole } from '@prisma/client';
@@ -12,6 +12,7 @@ import { Public } from 'src/common/decorators/public.decorators';
 import { ActivateAccountDto } from '../auth/dto/activate-account.dto';
 import { UserService } from '../user/user.service';
 import { ManualStatusUpdateDto } from './dto/student-status-update.dto';
+import { GetStudentsDto } from './dto/get-students.dto';
 
 @ApiTags('Student Enrollment (General Manager)') // <-- API TAG
 @Controller('student')
@@ -72,6 +73,27 @@ export class StudentController {
         });
     }
 
+    
+    @Get( )
+    @Roles(SystemRole.GENERAL_MANAGER)
+    @ApiOperation({ summary: 'GM: Fetch all students with pagination, searching (name, email), and filtering (Student ID, Level, Status).' })
+    @ApiResponse({ status: 200, description: 'Paginated list of student profiles.' })
+    async getAllStudents(
+        @Req() req: Request,
+        @Res() res: Response,
+        @Query() query: GetStudentsDto, // Use the query DTO for validation
+    ) {
+        const institutionId = req.user!.institutionId;
+
+        const studentsData = await this.studentService.findAllStudents(institutionId, query);
+
+        return sendResponse(res, {
+            statusCode: HttpStatus.OK,
+            success: true,
+            message: 'Students retrieved successfully.',
+            data: studentsData
+        });
+    }
 
   
   @Get('profile')
@@ -91,6 +113,8 @@ export class StudentController {
           data: profile,
       });
   }
+
+
 
 
     @Patch('status/manual/:studentId')

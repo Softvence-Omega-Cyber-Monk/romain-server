@@ -6,6 +6,7 @@ import { SystemRole, StudentStatus, Prisma } from '@prisma/client';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { StudentDebtService } from '../student-debt/student-debt.service';
 import { UserService } from '../user/user.service';
+import { GetStudentsDto } from './dto/get-students.dto';
 
 @Injectable()
 export class StudentService {
@@ -132,7 +133,7 @@ async findMyProfile(userId: string) {
             previousBalance: true,
             
             // Academic Context
-            currentLevel: { select: { name: true } },
+            currentLevel: { select: { programme:true } },
             currentSession: { select: { name: true, startDate: true, endDate: true } },
             
             // Institution Details
@@ -158,5 +159,72 @@ async findMyProfile(userId: string) {
     };
   }
 
-  // ... other methods ...
+ async findAllStudents(institutionId: string, query: GetStudentsDto) {
+        const { page, limit, search, studentId, currentLevelId, status } = query;
+        const skip = (page - 1) * limit;
+
+        // 1. Base WHERE clause (Scoped to Institution + Static Filters)
+        const where: Prisma.StudentWhereInput = {
+            institutionId: institutionId,
+            ...(studentId && { registrationNumber: studentId }),
+            ...(currentLevelId && { currentLevelId: currentLevelId }),
+            // Check if status is a valid enum value if filtering
+            ...(status && Object.values(StudentStatus).includes(status as StudentStatus) && { status: status as StudentStatus }),
+        };
+
+        // 2. Add dynamic search criteria (OR logic applied to User fields)
+        if (search) {
+            // This OR is applied as an AND to the static WHERE clause above.
+            where.AND = {
+                OR: [
+                    // Search on the related User's first name
+                    { User: { firstName: { contains: search, mode: 'insensitive' } } },
+                    // Search on the related User's last name
+                    { User: { lastName: { contains: search, mode: 'insensitive' } } },
+                    // Search on the related User's email
+                    { User: { email: { contains: search, mode: 'insensitive' } } },
+                ],
+            };
+        }
+        
+        // 3. Perform two queries (data and count) in parallel
+        const [students, total] = await this.prisma.$transaction([
+            this.prisma.student.findMany({
+                where: where,
+                skip: skip,
+                take: limit,
+                orderBy: {
+                    createdAt: 'desc', // Show newest students first
+                },
+                select: {
+                    id: true,
+                    registrationNumber: true,
+                    status: true,
+                    isRegistered: true,
+                    previousBalance: true,
+                    User: { 
+                        select: { email: true, firstName: true, lastName: true, phone: true,     profileImage:true } 
+                    },
+                    currentLevel: { 
+                        select: {
+                        name:true,
+                        programme:{select:{name:true}}
+                     } 
+                    },
+                    currentSession: { select: { name: true } },
+                },
+            }),
+            this.prisma.student.count({ where: where }),
+        ]);
+
+        return {
+            data: students,
+            meta: {
+                total,
+                page,
+                limit,
+                lastPage: Math.ceil(total / limit),
+            },
+        };
+    }
 }
