@@ -20,8 +20,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
-     "prisma": {
-    "schema": "./prisma/schema"  
+  "prisma": {
+    "schema": "./prisma/schema"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
@@ -33,6 +33,7 @@
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^6.0.1",
     "@nestjs/swagger": "^11.2.0",
     "@prisma/client": "^6.9.0",
     "@types/bcrypt": "^5.0.2",
@@ -43,6 +44,7 @@
     "date-fns": "^4.1.0",
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
+    "p-limit": "^7.2.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "prisma": "^6.9.0",
